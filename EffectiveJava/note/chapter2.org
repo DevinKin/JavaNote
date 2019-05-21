@@ -1,0 +1,312 @@
+* 第二章-创建和销毁对象
+** 第1条：考虑用静态工厂方法代替构造器
+   类可以通过静态工厂方法提供它的客户端，而不是构造器。有几大优势
+   - 静态工厂方法有名称，易于阅读，但一个类只能有一个带有指定签名的构造器。
+   - 不必在每次调用他们的时候都创建一个新对象。这可以使用预先构建好的实例，或将构建好的实例缓存起来，进行重复利用。
+   - 静态工厂方法可以返回原返回类型的任何子类型的对象。
+   - 静态工厂所返回的对象的类可以随着每次调用而发生变化，这取决于静态工厂方法的参数值。
+   - 静态工厂方法返回的对象所属的类，在编写包含该静态工厂方法的类时可以不存在。
+     
+   静态工厂方法的缺点
+   - 类如果不含公有的或受保护的构造器，就不能被子类化。
+   - 静态工厂方法程序员很难发现他们。
+   #+BEGIN_SRC java
+     public static Boolean valueOf (boolean b) {
+         return b ? Boolean.TRUE : Boolean.FALSE;
+     }
+   #+END_SRC
+   
+** 第2条：遇到多个构造器参数时要考虑使用构造器
+   静态工厂和构造器有个共同的局限性，都不能很好的扩展到大量的可选参数。
+   
+   重叠构造器模式可行，但是有大量参数时，客户端代码很难编写，难以阅读。
+   #+BEGIN_SRC java
+     package chapter2.item2.builder;
+
+     public class NutritionFacts {
+         private final int servingSize;      // (mL)             required
+         private final int servings;         // (per container)  required
+         private final int calories;         // (per serving)    optional
+         private final int fat;              // (g/serving)      optional
+         private final int sodium;           // (mg/serving)     optional
+         private final int carbohydrate;     // (g/serving)      optional
+
+         public NutritionFacts(int servingSize, int servings) {
+             this(servingSize, servings, 0);
+         }
+
+         public NutritionFacts(int servingSize, int servings, int calories) {
+             this(servingSize, servings, calories, 0);
+         }
+
+         public NutritionFacts(int servingSize, int servings,
+                               int calories, int fat) {
+             this(servingSize, servings, calories, fat, 0);
+         }
+
+         public NutritionFacts(int servingSize, int servings,
+                               int calories, int fat, int sodium) {
+             this(servingSize, servings, calories, fat, sodium, 0);
+         }
+
+         public NutritionFacts(int servingSize, int servings,
+                               int calories, int fat, int sodium, int carbohydrate) {
+             this.servingSize = servingSize;
+             this.servings = servings;
+             this.calories = calories;
+             this.fat = fat;
+             this.sodium = sodium;
+             this.carbohydrate = carbohydrate;
+         }
+     }
+   #+END_SRC
+   
+   JavaBeans模式，先调用一个无参构造器来创建对象，然后调用setter方法来设置每个必要的参数，以及相关的可选参数。
+   #+BEGIN_SRC java
+     package chapter2.item2.javabeans;
+
+     public class NutritionFacts {
+         // Parameters initialized to default values (if any)
+         private int servingSize     = -1;       // Required: no default value
+         private int servings        = -1;
+         private int calories        = 0;
+         private int fat             = 0;
+         private int sodium          = 0;
+         private int carbohydrate    = 0;
+
+         public NutritionFacts() {
+
+         }
+
+         public void setServingSize(int servingSize) {
+             this.servingSize = servingSize;
+         }
+
+         public void setServings(int servings) {
+             this.servings = servings;
+         }
+
+         public void setCalories(int calories) {
+             this.calories = calories;
+         }
+
+         public void setFat(int fat) {
+             this.fat = fat;
+         }
+
+         public void setSodium(int sodium) {
+             this.sodium = sodium;
+         }
+
+         public void setCarbohydrate(int carbohydrate) {
+             this.carbohydrate = carbohydrate;
+         }
+     }
+   #+END_SRC
+   JavaBeans模式缺点
+   - 构造过程中JavaBean可能处于不一致的状态。
+   - JavaBeans模式使得把类做成不可变的可能性不复存在，需要程序员付出额外的努力确保它线程安全。
+     
+   建造者(Builder)模式不直接生成想要的对象，而是让客户端利用所有必要的参数调用构造器(或者静态工厂)，得到一个 =builder= 对象，然后客户端在 =builder= 对象上调用类似 =setter= 的方法，来设置每个相关的可选参数。最后，客户端调用无参的 =build= 方法来生成通常是不可变的对象。这个 =builder= 通常是它构建类的静态成员类。
+   #+BEGIN_SRC java
+     package chapter2.item2.builder;
+
+     // Builder Pattern
+     public class NutritionFacts {
+         private final int servingSize;
+         private final int servings;
+         private final int calories;
+         private final int fat;
+         private final int sodium;
+         private final int carbohydrate;
+
+         @Override
+         public String toString() {
+             return "NutritionFacts{" +
+                     "servingSize=" + servingSize +
+                     ", servings=" + servings +
+                     ", calories=" + calories +
+                     ", fat=" + fat +
+                     ", fat=" + fat +
+                     ", sodium=" + sodium +
+                     ", carbohydrate=" + carbohydrate +
+                     '}';
+         }
+
+         public static class Builder {
+             // Required parameters
+             private final int servingSize;
+             private final int servings;
+
+             // Optional parameters - initialized to default values
+             private int calories = 0;
+             private int fat = 0;
+             private int sodium = 0;
+             private int carbohydrate = 0;
+
+             public Builder(int servingSize, int servings) {
+                 this.servingSize = servingSize;
+                 this.servings = servings;
+             }
+
+             public Builder calories(int val) {
+                 calories = val;
+                 return this;
+             }
+
+             public Builder fat(int val) {
+                 fat = val;
+                 return this;
+             }
+
+             public Builder sodium(int val) {
+                 sodium = val;
+                 return this;
+             }
+
+             public Builder carbohydrate(int val) {
+                 carbohydrate = val;
+                 return this;
+             }
+
+             public NutritionFacts build() {
+                 return new NutritionFacts(this);
+             }
+         }
+
+         private NutritionFacts(Builder builder) {
+             servingSize = builder.servingSize;
+             servings = builder.servings;
+             calories = builder.calories;
+             fat = builder.fat;
+             sodium = builder.sodium;
+             carbohydrate = builder.carbohydrate;
+         }
+
+         public static void main(String[] args) {
+             NutritionFacts cocaCola = new Builder(240, 8)
+                     .calories(100).sodium(35).carbohydrate(27).build();
+             System.out.println(cocaCola);
+         }
+     }
+   #+END_SRC
+   想要尽快侦测到无效的参数，可以在 =builder= 的构造器和方法中检查参数的有效性。查看不可变量，包括 =build= 方法调用的构造器中的多个参数。为了确保这些变量免受攻击，从 =builder= 复制完参数之后，要检查对象域。如果检查失败，就抛出 =IllegalArgumentException= ，其中的详细信息会说明哪些参数是无效的。
+
+   Builder模式也适用于类层次结构。
+   Pizza抽象类
+   #+BEGIN_SRC java
+      package chapter2.item2.hierarchicalbuilder;
+
+     import java.util.EnumSet;
+     import java.util.Objects;
+     import java.util.Set;
+
+     // Builder pattern for class hierarchies
+     public abstract class Pizza {
+         public enum Topping {
+             HAM, MUSHROOM, ONION, PEPPER, SAUSAGE
+         }
+
+         final Set<Topping> toppings;
+
+         abstract static class Builder<T extends Builder<T>> {
+             EnumSet<Topping> toppings = EnumSet.noneOf(Topping.class);
+             public T addTopping(Topping topping) {
+                 toppings.add(Objects.requireNonNull(topping));
+                 return self();
+             }
+
+             abstract Pizza build();
+
+             // Subclasses must override this method to return "this"
+             protected abstract T self();
+         }
+         Pizza(Builder<?> builder) {
+             toppings = builder.toppings.clone();        // See Item 50
+         }
+     }
+   #+END_SRC
+   两个实现类
+   #+BEGIN_SRC java
+     package chapter2.item2.hierarchicalbuilder;
+
+     import java.util.Objects;
+
+     public class NyPizza extends Pizza{
+         public enum  Size {
+             SMALL, MEDIUM, LARGE
+         }
+         private final Size size;
+
+         public static class Builder extends Pizza.Builder<Builder> {
+             private final Size size;
+
+             public Builder(Size size) {
+                 this.size = Objects.requireNonNull(size);
+             }
+
+             @Override
+             NyPizza build() {
+                 return new NyPizza(this);
+             }
+
+             @Override
+             protected Builder self() {
+                 return this;
+             }
+         }
+
+         private NyPizza(Builder builder) {
+             super(builder);
+             size = builder.size;
+         }
+     }
+   #+END_SRC
+   #+BEGIN_SRC java
+     package chapter2.item2.hierarchicalbuilder;
+
+     public class Calzone extends Pizza{
+         private final boolean sauceInside;
+
+         public static class Builder extends Pizza.Builder<Builder> {
+             private boolean sauceInside = false;        // Default
+
+             public Builder sauceInside() {
+                 sauceInside = true;
+                 return this;
+             }
+
+             @Override
+             public Calzone build() {
+                 return new Calzone(this);
+             }
+
+             @Override
+             protected Builder self() {
+                 return this;
+             }
+         }
+
+         private Calzone(Builder builder) {
+             super(builder);
+             sauceInside = builder.sauceInside;
+         }
+     }  
+   #+END_SRC
+   客户端代码
+   #+BEGIN_SRC java
+     package chapter2.item2.hierarchicalbuilder;
+
+     import static chapter2.item2.hierarchicalbuilder.NyPizza.Size.SMALL;
+     import static chapter2.item2.hierarchicalbuilder.Pizza.Topping.*;
+
+     public class Client {
+         public static void main(String[] args) {
+             NyPizza pizza = new NyPizza.Builder(SMALL)
+                     .addTopping(SAUSAGE).addTopping(ONION).build();
+             Calzone calzone = new Calzone.Builder()
+                     .addTopping(HAM).sauceInside().build();
+         }
+     }  
+   #+END_SRC
+   如果类的构造器或者静态工厂中具有多个参数，设计这种类时，Builder模式就是一个不错的选择。
