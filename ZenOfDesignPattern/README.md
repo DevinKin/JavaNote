@@ -6,3 +6,5 @@
 - [第三章-依赖倒置原则(dip)](./note/chapter3.md)
 
 - [第四章-接口隔离原则(dip)](./note/chapter4.org)
+
+- [第五章-迪米特法则(lod)](./note/chapter5.org)
