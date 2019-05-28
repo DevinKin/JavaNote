@@ -8,3 +8,5 @@
 - [第四章-接口隔离原则(dip)](./note/chapter4.org)
 
 - [第五章-迪米特法则(lod)](./note/chapter5.org)
+
+- [第六章-开闭原则(ocp)](./note/chapter6.org)
