@@ -10,3 +10,5 @@
 - [第五章-迪米特法则(lod)](./note/chapter5.org)
 
 - [第六章-开闭原则(ocp)](./note/chapter6.org)
+
+- [第七章-单例模式(sp)](./note/chapter7.org)
