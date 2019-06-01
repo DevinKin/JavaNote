@@ -1,0 +1,355 @@
+* 工厂方法模式
+** 工厂方法的定义
+定义一个用于创建对象的接口，让子类决定实例化哪一个类。工厂方法使一个类的实例化延迟到其子类。
+
+*** 工厂模式抽象代码
+抽象产品类
+#+BEGIN_SRC java
+  package fmp.session2;
+
+  /**
+   ,* @program: zen-of-design-pattern
+   ,* @author: devinkin
+   ,* @create: 2019-06-01 12:05
+   ,* @description: 抽象产品类
+   ,**/
+  public abstract class Product {
+      // 产品类的公共方法
+      public void method1() {
+          // 业务逻辑处理
+      }
+
+      // 抽象方法
+      public abstract void method2();
+  }
+#+END_SRC
+
+具体产品类1
+#+BEGIN_SRC java
+  package fmp.session2;
+
+  /**
+   ,* @program: zen-of-design-pattern
+   ,* @author: devinkin
+   ,* @create: 2019-06-01 12:06
+   ,* @description: 具体产品类
+   ,**/
+  public class ConcreteProduct1 extends Product{
+      @Override
+      public void method2() {
+          // 业务逻辑处理
+      }
+  }
+#+END_SRC
+
+具体产品类2
+#+BEGIN_SRC java
+  package fmp.session2;
+
+  /**
+   ,* @program: zen-of-design-pattern
+   ,* @author: devinkin
+   ,* @create: 2019-06-01 12:07
+   ,* @description: 具体产品类2
+   ,**/
+  public class ConcreteProduct2 extends Product{
+      @Override
+      public void method2() {
+          // 业务逻辑处理
+      }
+  }
+#+END_SRC
+
+抽象工厂类
+#+BEGIN_SRC java
+  package fmp.session2;
+
+  /**
+   ,* @program: zen-of-design-pattern
+   ,* @author: devinkin
+   ,* @create: 2019-06-01 12:08
+   ,* @description: 抽象工厂类
+   ,**/
+  public abstract class Creator {
+      /**
+       ,* 创建一个产品对象，其输入参数类型可以自行设置
+       ,* 通常为String、Enum、Class等，当然也可以为空
+       ,*/
+      public abstract <T extends Product> T createProduct(Class<T> c);
+  }
+#+END_SRC
+
+
+具体工厂类
+#+BEGIN_SRC java
+  package fmp.session2;
+
+  /**
+   ,* @program: zen-of-design-pattern
+   ,* @author: devinkin
+   ,* @create: 2019-06-01 12:10
+   ,* @description: 具体工厂类
+   ,**/
+  public class ConcreteCreator extends Creator{
+      @Override
+      public <T extends Product> T createProduct(Class<T> c) {
+          Product product = null;
+          try {
+              product = (Product) Class.forName(c.getName()).newInstance();
+          } catch (Exception e) {
+              // 异常处理
+          }
+          return (T) product;
+      }
+  }
+#+END_SRC
+
+应用场景类
+#+BEGIN_SRC java
+  package fmp.session2;
+
+  /**
+   ,* @program: zen-of-design-pattern
+   ,* @author: devinkin
+   ,* @create: 2019-06-01 12:11
+   ,* @description: 场景类
+   ,**/
+  public class Client {
+      public static void main(String[] args) {
+          Creator creator = new ConcreteCreator();
+          Product product = creator.createProduct(ConcreteProduct1.class);
+          /*
+           ,* 继续业务处理
+           ,*/
+      }
+  }
+#+END_SRC
+
+** 工厂方法模式的应用
+*** 工厂方法模式的优点
+- 良好的封装性，代码结构清晰。降低模块间的耦合。
+- 工厂类不需要任何修改就可以完成系统扩展。
+- 屏蔽产品类。产品类的实现如何变化，调用者都不需要关心。
+- 工厂方法模式是典型的解耦框架。高层模块值需要知道产品的抽象类，其他的实现类都不用关心，符合迪米特法则，我们不需要的就不要取交流；也符合依赖倒置原则，只依赖产品类的抽象；当然也符合里氏替换原则，使用产品子类替换产品父类。
+
+** 工厂方法模式的扩展
+*** 缩小为简单工厂模式(静态工厂模式)
+一个模块仅需要一个工厂类，没毕业把它生产出来，使用静态方法就可以了。
+
+工厂类
+#+BEGIN_SRC java
+  package fmp.session3;
+
+
+  /**
+   ,* @program: zen-of-design-pattern
+   ,* @author: devinkin
+   ,* @create: 2019-06-01 11:57
+   ,* @description: 人类创建工厂
+   ,**/
+  public class HumanFactory{
+      public static <T extends Human> T createHuman(Class<T> c) {
+          // 定义一个生产的人种
+          Human human = null;
+          try {
+              // 生产一个人种
+              human = (T) Class.forName(c.getName()).newInstance();
+          } catch (Exception e) {
+              System.out.println("人种生成错误");
+          }
+          return (T) human;
+      }
+  }
+#+END_SRC
+
+
+应用场景类
+#+BEGIN_SRC java
+  package fmp.session3;
+
+  /**
+   ,* @program: zen-of-design-pattern
+   ,* @author: devinkin
+   ,* @create: 2019-06-01 11:59
+   ,* @description: 女娲类
+   ,**/
+  public class NvWa {
+      public static void main(String[] args) {
+
+          // 女娲第一次造人，火候补租，于是白人产生了
+          System.out.println("--造出的第一批人是白色人种--");
+          Human whiteHuman = HumanFactory.createHuman(WhiteHuman.class);
+          whiteHuman.getColor();
+          whiteHuman.talk();
+
+          // 女娲第二次遭人，火候过足，于是黑人产生了
+          System.out.println("\n--造出的第二批人是黑色人种--");
+          Human blackHuman = HumanFactory.createHuman(BlackHuman.class);
+          blackHuman.getColor();
+          blackHuman.talk();
+
+          // 第三次造人，火候刚刚好，于是黄色人种产生了
+          System.out.println("\n--造出第三批人是黄种人--");
+          Human yellowHuman = HumanFactory.createHuman(YellowHuman.class);
+          yellowHuman.getColor();
+          yellowHuman.talk();
+      }
+  }
+#+END_SRC
+
+*** 升级为多个工厂类
+由调用者选择使用哪个工厂方法关联。
+
+某个工厂类
+#+BEGIN_SRC java
+  package fmp.session4;
+
+  /**
+   ,* @program: zen-of-design-pattern
+   ,* @author: devinkin
+   ,* @create: 2019-06-01 13:35
+   ,* @description: 黄色人种创建工厂
+   ,**/
+  public class YellowHumanFactory extends AbstractHumanFactory{
+      @Override
+      public Human createHuman() {
+          return new YellowHuman();
+      }
+  }
+#+END_SRC
+
+实现代码
+#+BEGIN_SRC java
+  package fmp.session4;
+
+
+  /**
+   ,* @program: zen-of-design-pattern
+   ,* @author: devinkin
+   ,* @create: 2019-06-01 11:59
+   ,* @description: 女娲类
+   ,**/
+  public class NvWa {
+      public static void main(String[] args) {
+
+          // 女娲第一次造人，火候补租，于是白人产生了
+          System.out.println("--造出的第一批人是白色人种--");
+          Human whiteHuman = (new WhiteHumanFactory()).createHuman();
+          whiteHuman.getColor();
+          whiteHuman.talk();
+
+          // 女娲第二次遭人，火候过足，于是黑人产生了
+          System.out.println("\n--造出的第二批人是黑色人种--");
+          Human blackHuman = (new BlackHumanFactory()).createHuman();
+          blackHuman.getColor();
+          blackHuman.talk();
+
+          // 第三次造人，火候刚刚好，于是黄色人种产生了
+          System.out.println("\n--造出第三批人是黄种人--");
+          Human yellowHuman = (new YellowHumanFactory()).createHuman();
+          yellowHuman.getColor();
+          yellowHuman.talk();
+      }
+  }
+#+END_SRC
+
+在复杂的应用中一般采用多个工厂的方法，然后再增加一个协调类，避免调用者与各个子工厂交流，协调类的作用是封装子工厂类，对高层模块提供统一的访问接口。
+
+*** 替代单例模式
+通过获得类构造器，然后设置访问权限，生成一个对象，然后提供外部访问，保证内存中的对象唯一。
+
+单例类
+#+BEGIN_SRC java
+  package fmp.session5;
+
+  /**
+   ,* @program: zen-of-design-pattern
+   ,* @author: devinkin
+   ,* @create: 2019-06-01 13:40
+   ,* @description: 单例类
+   ,**/
+  public class Singleton {
+      // 不允许通过new产生一个对象
+      private Singleton() {
+
+      }
+
+      public void doSomething() {
+          // 业务处理
+      }
+  }
+#+END_SRC
+
+单例工厂类
+#+BEGIN_SRC java
+  package fmp.session5;
+
+  import java.lang.reflect.Constructor;
+
+  /**
+   ,* @program: zen-of-design-pattern
+   ,* @author: devinkin
+   ,* @create: 2019-06-01 13:40
+   ,* @description: 单例工厂类
+   ,**/
+  public class SingletonFactory {
+      private static Singleton singleton;
+
+      static {
+          try {
+              Class cl = Class.forName(Singleton.class.getName());
+              // 获得无参构造器
+              Constructor constructor = cl.getDeclaredConstructor();
+              // 产生一个实例对象
+              singleton = (Singleton) constructor.newInstance();
+          } catch (Exception e) {
+              //异常处理
+          }
+      }
+
+      public static Singleton getSingleton() {
+          return singleton;
+      }
+  }
+#+END_SRC
+*** 延迟初始化
+延迟初始化是指一个对象被消费完毕后，并不立即释放，工厂类保持其初始状态，等待再次被使用。
+
+延迟初始化工厂类
+#+BEGIN_SRC java
+  package fmp.session6;
+
+  import java.util.HashMap;
+  import java.util.Map;
+
+  /**
+   ,* @program: zen-of-design-pattern
+   ,* @author: devinkin
+   ,* @create: 2019-06-01 13:48
+   ,* @description: 产品工厂类
+   ,**/
+  public class ProductFactory {
+      private static final Map<String, Product> prMap = new HashMap<>();
+
+      public static synchronized Product createProduct(String type) {
+          Product product = null;
+
+          // 如果Map中已经有这个对象
+          if (prMap.containsKey(type)) {
+              product = prMap.get(type);
+          } else {
+              if (type.equals("Product1")) {
+                  product = new ConcreteProduct1();
+              } else {
+                  product = new ConcreteProduct2();
+              }
+              // 同时把对象缓存到容器中
+              prMap.put(type, product);
+          }
+          return product;
+      }
+  }
+#+END_SRC
+
+
+延迟加载可以降低对象的产生和销毁带来的复杂性。
