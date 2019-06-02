@@ -14,3 +14,5 @@
 - [第七章-单例模式(sp)](./note/chapter7.org)
 
 - [第八章-工厂方法模式(fmp)](./note/chapter8.org)
+
+- [第九章-抽象工厂模式(afp)](./note/chapter9.org)
