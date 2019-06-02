@@ -1,0 +1,159 @@
+* 模板方法模式
+
+** 模板方法模式的定义
+定义一个操作中的算法的框架，而将这些步骤延迟到子类中。使得子类可以不改变一个算法的结构即可重定义该算法的某些特定步骤。
+
+模板方法模式中 =AbstractClass= 叫做抽象模板，它的方法分为两类
+- 基本方法。基本操作，是由子类实现的方法，并且在模板方法被调用。
+- 模板方法。可以有一个或几个，一般是一个具体方法，也就是一个框架，实现对基本方法的调度，完成固定的逻辑。
+  
+为了防止恶意操作，一般模板方法都加上 =final= 关系欸女子，不允许被覆写。
+
+抽象模板中的基本方法尽量设计为 =protected= 类型，符合迪米特法则，不需要暴露的属性或方法尽量不要设置为 =protected= 类型。实现类若非必要，尽量不要扩大父类中的访问权限。
+
+
+抽象模板类
+#+BEGIN_SRC java
+  package tmp.session2;
+
+  /**
+   ,* @program: zen-of-design-pattern
+   ,* @author: devinkin
+   ,* @create: 2019-06-02 11:54
+   ,* @description: 抽象模板类
+   ,**/
+  public abstract class AbstractClass {
+      // 基本方法
+      protected abstract void doSomething();
+      // 基本方法
+      protected abstract void doAnything();
+      // 模板方法
+      void templateMethod() {
+          /**
+           ,* 调用基本方法，完成相关的逻辑
+           ,*/
+          this.doAnything();
+          this.doSomething();
+      }
+  }
+#+END_SRC
+
+具体模板类1
+#+BEGIN_SRC java
+  package tmp.session2;
+
+  /**
+   ,* @program: zen-of-design-pattern
+   ,* @author: devinkin
+   ,* @create: 2019-06-02 11:56
+   ,* @description: 具体模板类
+   ,**/
+  public class ConcreteClass1 extends AbstractClass{
+      @Override
+      protected void doSomething() {
+          // 业务逻辑处理
+      }
+
+      @Override
+      protected void doAnything() {
+          // 业务逻辑处理
+      }
+  }
+#+END_SRC
+
+具体模板类2
+#+BEGIN_SRC java
+  package tmp.session2;
+
+  /**
+   ,* @program: zen-of-design-pattern
+   ,* @author: devinkin
+   ,* @create: 2019-06-02 11:56
+   ,* @description: 具体模板类
+   ,**/
+  public class ConcreteClass2 extends AbstractClass{
+      @Override
+      protected void doSomething() {
+          // 业务逻辑处理
+      }
+
+      @Override
+      protected void doAnything() {
+          // 业务逻辑处理
+      }
+  }
+#+END_SRC
+
+场景类
+#+BEGIN_SRC java
+  package tmp.session2;
+
+
+  /**
+   ,* @program: zen-of-design-pattern
+   ,* @author: devinkin
+   ,* @create: 2019-06-02 11:57
+   ,* @description: 场景类
+   ,**/
+  public class Client {
+      public static void main(String[] args) {
+          AbstractClass class1 = new ConcreteClass1();
+          AbstractClass class2 = new ConcreteClass2();
+          // 调用模板方法
+          class1.templateMethod();
+          class2.templateMethod();
+      }
+  }
+#+END_SRC
+
+** 模板方法模式的应用
+
+*** 模板方法模式的优点
+- 封装不变化，扩展可变部分。
+- 提取公共部分代码，便于维护。
+- 行为由父类控制，子类实现。（符合开闭原则）
+
+*** 模板方法模式的缺点
+子类执行的结果影响了父类的结果，在复杂的项目中，会带来代码阅读的难度。
+
+*** 模板方法模式的使用场景
+- 多个子类有公有的方法，并且基本逻辑相同。
+- 重要、复杂的算法，可以把算法设计为模板方法，周边的相关细节功能由各个子类实现。
+- 重构时，模板方法是一个经常使用的模式，把相同的代码抽取到父类中，然后通过钩子函数约束其行为。
+
+
+** 模板方法模式的扩展
+在模板类在使用钩子方法影响模板方法的执行结果。
+
+#+BEGIN_SRC java
+  package tmp.session3;
+
+  /**
+   ,* @program: zen-of-design-pattern
+   ,* @author: devinkin
+   ,* @create: 2019-06-02 11:44
+   ,* @description: 抽象悍马模型
+   ,**/
+  public abstract class HummerModel {
+      /**
+       ,* 首先，这个模型要能被发动起来，别管是手摇发动，还是电力发动，
+       ,* 反正要是能够发动起来，那这个实现要在实现类里了
+       ,*/
+      protected abstract void start();
+      protected abstract void stop();
+      protected abstract void alarm();
+      protected abstract void engineBoom();
+      final void run() {
+          this.start();
+          this.engineBoom();
+          if (isAlarm()) {
+              this.alarm();
+          }
+          this.stop();
+      }
+
+      protected boolean isAlarm() {
+          return true;
+      }
+  }
+#+END_SRC

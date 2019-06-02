@@ -16,3 +16,5 @@
 - [第八章-工厂方法模式(fmp)](./note/chapter8.org)
 
 - [第九章-抽象工厂模式(afp)](./note/chapter9.org)
+
+- [第十章-模板方法模式(tmp)](./note/chapter10.org)
