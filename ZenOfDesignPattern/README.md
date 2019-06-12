@@ -18,3 +18,7 @@
 - [第九章-抽象工厂模式(afp)](./note/chapter9.org)
 
 - [第十章-模板方法模式(tmp)](./note/chapter10.org)
+
+- [第十一章-建造者模式(bp)](./note/chapter11.org)
+
+- [第十二章-代理模式(pp)](./note/chapter12.org)

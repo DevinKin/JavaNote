@@ -1,0 +1,15 @@
+spring:
+  datasource:
+    driver-class-name: com.mysql.jdbc.Driver
+    username: root
+    password: root
+    url: jdbc:mysql://localhost:3307/TDD?zeroDateTimeBehavior=convertToNull&useUnicode=true&characterEncoding=utf-8&useSSL=false
+  jpa:
+    database: MYSQL
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+  data:
+    jpa:
+      repositories:
+        enabled: true
