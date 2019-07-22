@@ -1,0 +1,592 @@
+* 第14章-中介者模式
+** 进销存管理
+   采购管理类
+   #+begin_src java
+     package mediator.session1;
+
+     /**
+      ,* @program: zen-of-design-pattern
+      ,* @author: devinkin
+      ,* @create: 2019-07-22 11:02
+      ,* @description: 采购管理类
+      ,**/
+     public class Purchase {
+         // 采购IBM电脑
+         public void buyIBMcomputer(int number) {
+             // 访问库存
+             Stock stock = new Stock();
+
+             // 访问销售情况
+             Sale sale = new Sale();
+             int saleStatus = sale.getSaleStatus();
+
+             if (saleStatus > 80) {
+                 // 销售情况良好
+                 System.out.println("采购IBM电脑：" + number + "台");
+                 stock.increase(number);
+             } else {
+                 // 销售情况不好
+                 int buyNumber = number / 2;     // 折半采购
+                 System.out.println("采购IBM电脑：" + buyNumber + "台");
+                 stock.increase(buyNumber);
+             }
+         }
+
+         // 不再采购IBM电脑
+         public void refuseBuyIBM() {
+             System.out.println("不再采购IBM电脑");
+         }
+     }
+   #+end_src
+   
+   库存管理类
+   #+begin_src java
+     package mediator.session1;
+
+     /**
+      ,* @program: zen-of-design-pattern
+      ,* @author: devinkin
+      ,* @create: 2019-07-22 11:03
+      ,* @description: 库存类
+      ,**/
+     public class Stock {
+         // 开始有100台电脑
+         private static int COMPUTER_NUMBER = 100;
+
+         // 库存增加
+         public void increase(int number) {
+             COMPUTER_NUMBER = COMPUTER_NUMBER + number;
+             System.out.println("库存数量为：" + COMPUTER_NUMBER);
+         }
+
+         // 库存降低
+         public void decrease(int number) {
+             COMPUTER_NUMBER = COMPUTER_NUMBER - number;
+             System.out.println("库存数量为：" + COMPUTER_NUMBER);
+         }
+
+         // 获得库存数量
+         public int getStockNumber() {
+             return COMPUTER_NUMBER;
+         }
+
+         // 存货压力大，就要通知采购人员不要采购，销售人员要尽快销售
+         public void clearStock() {
+             Purchase purchase = new Purchase();
+             Sale sale = new Sale();
+             System.out.println("清理存货数量为：" + COMPUTER_NUMBER);
+             // 要求折价销售
+             sale.offSale();
+             // 要求采购人员不要采购
+             purchase.refuseBuyIBM();
+         }
+     }
+   #+end_src
+
+   销售管理类
+   #+begin_src java
+     package mediator.session1;
+
+     import java.util.Random;
+
+     /**
+      ,* @program: zen-of-design-pattern
+      ,* @author: devinkin
+      ,* @create: 2019-07-22 11:03
+      ,* @description: 销售类
+      ,**/
+     public class Sale {
+         // 销售IBM电脑
+         public void sellIBMComputer(int number) {
+             // 访问库存
+             Stock stock = new Stock();
+             // 访问采购
+             Purchase purchase = new Purchase();
+             if (stock.getStockNumber() < number) { // 库存数量不够销售
+                 purchase.buyIBMcomputer(number);
+             }
+             System.out.println("销售IBM电脑" + number + "台");
+             stock.decrease(number);
+         }
+
+         // 反馈销售情况，0~100之间变化，0代表根本没人卖，100表示非常畅销，出一个卖一个
+         public int getSaleStatus() {
+             Random rand = new Random(System.currentTimeMillis());
+             int saleStatus = rand.nextInt(100);
+             System.out.println("IBM电脑的销售情况为：" + saleStatus);
+             return saleStatus;
+         }
+
+         // 折价处理
+         public void offSale() {
+             // 库房有多少卖多少
+             Stock stock = new Stock();
+             System.out.println("折价销售IBM电脑" + stock.getStockNumber() + "台");
+         }
+     }
+   #+end_src
+
+   场景类
+   #+begin_src java
+     package mediator.session1;
+
+     /**
+      ,* @program: zen-of-design-pattern
+      ,* @author: devinkin
+      ,* @create: 2019-07-22 11:17
+      ,* @description: 场景类
+      ,**/
+     public class Client {
+         public static void main(String[] args) {
+             // 采购人员采购电脑
+             System.out.println("------采购人员采购电脑------");
+             Purchase purchase = new Purchase();
+             purchase.buyIBMcomputer(100);
+             // 销售人员销售电脑
+             System.out.println("\n------销售人员销售电脑------");
+             Sale sale = new Sale();
+             sale.sellIBMComputer(1);
+             // 库房管理人员管理库存
+             System.out.println("\n------库房管理人员清库处理------");
+             Stock stock = new Stock();
+             stock.clearStock();
+         }
+     }
+   #+end_src
+
+   网络拓扑结构有三种类型
+   - 总线型
+   - 环形
+   - 星型
+   -
+
+*** 使用中介者管理进销存  
+    抽象中介者类
+    #+begin_src java
+      package mediator.session2;
+
+      /**
+       ,* @program: zen-of-design-pattern
+       ,* @author: devinkin
+       ,* @create: 2019-07-22 11:39
+       ,* @description: 抽象中介者类
+       ,**/
+      public abstract class AbstractMediator {
+          protected Purchase purchase;
+
+          protected Sale sale;
+
+          protected Stock stock;
+
+          // 构造函数
+          public AbstractMediator() {
+              purchase = new Purchase(this);
+              sale = new Sale(this);
+              stock = new Stock(this);
+          }
+
+          // 中介者最重要的方法叫做时间方法，处理多个对象之间的关系
+          public abstract void execute(String str, Object ... objects);
+      }
+    #+end_src
+
+    具体中介者类
+    #+begin_src java
+      package mediator.session2;
+
+      /**
+       ,* @program: zen-of-design-pattern
+       ,* @author: devinkin
+       ,* @create: 2019-07-22 11:43
+       ,* @description: 具体中介者
+       ,**/
+      public class Mediator extends AbstractMediator{
+          @Override
+          public void execute(String str, Object... objects) {
+              if (str.equals("purchase.buy")) {
+                  // 采购电脑
+                  this.buyComputer((Integer) objects[0]);
+              } else if (str.equals("sale.sell")) {
+                  // 销售电脑
+                  this.sellComputer((Integer) objects[0]);
+              } else if (str.equals("sale.offsell")) {
+                  // 折价销售
+                  this.offSell();
+              } else if (str.equals("stock.clear")) {
+                  // 清仓处理
+                  this.clearStock();
+              }
+          }
+
+          // 采购电脑
+          private void buyComputer(int number) {
+              int saleStatus=  super.sale.getSaleStatus();
+
+              if (saleStatus > 80) {
+                  // 销售情况良好
+                  System.out.println("采购IBM电脑：" + number + "台");
+                  super.stock.increase(number);
+              } else {
+                  // 销售情况不好
+                  int buyNumber = number / 2;     // 折半采购
+                  System.out.println("采购IBM电脑：" + buyNumber + "台");
+                  super.stock.increase(buyNumber);
+              }
+          }
+
+          // 销售电脑
+          private void sellComputer(int number) {
+
+              if (stock.getStockNumber() < number) { // 库存数量不够销售
+                  super.purchase.buyIBMcomputer(number);
+              }
+              System.out.println("销售IBM电脑" + number + "台");
+              super.stock.decrease(number);
+          }
+
+
+          // 折价销售电脑
+          private void offSell() {
+              // 库房有多少卖多少
+              System.out.println("折价销售IBM电脑" + super.stock.getStockNumber() + "台");
+          }
+
+          // 清仓处理
+          private void clearStock() {
+              // 要求清仓销售
+              super.sale.offSale();
+              // 要求采购人员不要采购
+              super.purchase.refuseBuyIBM();
+          }
+      }
+    #+end_src
+
+    抽象同事类
+    #+begin_src java
+      package mediator.session2;
+
+      /**
+       ,* @program: zen-of-design-pattern
+       ,* @author: devinkin
+       ,* @create: 2019-07-22 12:00
+       ,* @description: 抽象同事类
+       ,**/
+      public abstract class AbstractColleague {
+          protected AbstractMediator mediator;
+          public AbstractColleague(AbstractMediator _mediator) {
+              this.mediator = _mediator;
+          }
+      }
+    #+end_src
+
+    修改后的库存类
+    #+begin_src java
+      package mediator.session2;
+
+      /**
+       ,* @program: zen-of-design-pattern
+       ,* @author: devinkin
+       ,* @create: 2019-07-22 11:03
+       ,* @description: 库存类
+       ,**/
+      public class Stock extends AbstractColleague{
+          // 开始有100台电脑
+          private static int COMPUTER_NUMBER = 100;
+
+          public Stock(AbstractMediator _mediator) {
+              super(_mediator);
+          }
+
+          // 库存增加
+          public void increase(int number) {
+              COMPUTER_NUMBER = COMPUTER_NUMBER + number;
+              System.out.println("库存数量为：" + COMPUTER_NUMBER);
+          }
+
+          // 库存降低
+          public void decrease(int number) {
+              COMPUTER_NUMBER = COMPUTER_NUMBER - number;
+              System.out.println("库存数量为：" + COMPUTER_NUMBER);
+          }
+
+          // 获得库存数量
+          public int getStockNumber() {
+              return COMPUTER_NUMBER;
+          }
+
+          // 存货压力大，就要通知采购人员不要采购，销售人员要尽快销售
+          public void clearStock() {
+              System.out.println("清理库存数量为：" + COMPUTER_NUMBER);
+              super.mediator.execute("stock.clear");
+          }
+      }
+    #+end_src
+    
+    修改后的销售管理类
+    #+begin_src java
+      package mediator.session2;
+
+      import java.util.Random;
+
+      /**
+       ,* @program: zen-of-design-pattern
+       ,* @author: devinkin
+       ,* @create: 2019-07-22 11:03
+       ,* @description: 销售类
+       ,**/
+      public class Sale extends AbstractColleague{
+          public Sale(AbstractMediator _mediator) {
+              super(_mediator);
+          }
+
+          // 销售IBM电脑
+          public void sellIBMComputer(int number) {
+              super.mediator.execute("sale.sell" , number);
+              System.out.println("销售IBM电脑" + number + "台");
+          }
+
+          // 反馈销售情况，0~100之间变化，0代表根本没人卖，100表示非常畅销，出一个卖一个
+          public int getSaleStatus() {
+              Random rand = new Random(System.currentTimeMillis());
+              int saleStatus = rand.nextInt(100);
+              System.out.println("IBM电脑的销售情况为：" + saleStatus);
+              return saleStatus;
+          }
+
+          // 折价处理
+          public void offSale() {
+              super.mediator.execute("sale.offsell");
+          }
+      }
+    #+end_src
+
+    修改后的采购管理类
+    #+begin_src java
+      package mediator.session2;
+
+      /**
+       ,* @program: zen-of-design-pattern
+       ,* @author: devinkin
+       ,* @create: 2019-07-22 11:02
+       ,* @description: 采购管理类
+       ,**/
+      public class Purchase extends AbstractColleague{
+          public Purchase(AbstractMediator _mediator) {
+              super(_mediator);
+          }
+
+          // 采购IBM电脑
+          public void buyIBMcomputer(int number) {
+              super.mediator.execute("purchase.buy", number);
+          }
+
+          // 不再采购IBM电脑
+          public void refuseBuyIBM() {
+              System.out.println("不再采购IBM电脑");
+          }
+      }
+    #+end_src
+
+    场景类
+    #+begin_src java
+      package mediator.session2;
+
+      /**
+       ,* @program: zen-of-design-pattern
+       ,* @author: devinkin
+       ,* @create: 2019-07-22 12:10
+       ,* @description: 修改后的场景类
+       ,**/
+      public class Client {
+          public static void main(String[] args) {
+              AbstractMediator mediator = new Mediator();
+              // 采购人员采购电脑
+              System.out.println("------采购人员采购电脑------");
+              Purchase purchase = new Purchase(mediator);
+              purchase.buyIBMcomputer(100);
+              // 销售人员销售电脑
+              System.out.println("\n------销售人员销售电脑------");
+              Sale sale = new Sale(mediator);
+              sale.sellIBMComputer(1);
+              // 库房管理人员管理库存
+              System.out.println("\n------库房管理人员清库处理------");
+              Stock stock = new Stock(mediator);
+              stock.clearStock();
+          }
+      }
+    #+end_src
+
+
+** 中介者模式的定义
+   用一个中介对象封装一系列的对象交互，中介者使各对象不需要显式的相互作用，从而使其耦合松散，而且可以独立地改变他们之间的交互。
+
+   中介者模式的组成部分
+   - =Mediator= 抽象中介者角色。
+   - =ConcreteMediator= 具体中介者角色。
+   - =Colleague= 同事角色。
+
+   每个同事角色都知道中介角色，而且与其他同事角色通信时，一定要通过中介者角色协作。
+
+   每个同事类的行为分为两种：一种是同事本身的行为(自发行为)，一种是依赖中介者才能完成的行为，叫做依赖方法。
+
+   抽象中介者类
+   #+begin_src java
+     package mediator.session3;
+
+     /**
+      ,* @program: zen-of-design-pattern
+      ,* @author: devinkin
+      ,* @create: 2019-07-22 12:41
+      ,* @description: 抽象中介者
+      ,**/
+     public abstract class Mediator {
+         // 定义同事类
+         protected ConcreteColleague1 c1;
+         protected ConcreteColleague2 c2;
+
+         // 通过getter/setter方法把同事类注入进来
+         public ConcreteColleague1 getC1() {
+             return c1;
+         }
+
+         public void setC1(ConcreteColleague1 c1) {
+             this.c1 = c1;
+         }
+
+         public ConcreteColleague2 getC2() {
+             return c2;
+         }
+
+         public void setC2(ConcreteColleague2 c2) {
+             this.c2 = c2;
+         }
+
+         // 中介者模式的业务逻辑
+         public abstract void doSomething1();
+         public abstract void doSomething2();
+     }
+   #+end_src
+
+   通用中介者类
+   #+begin_src java
+     package mediator.session3;
+
+     /**
+      ,* @program: zen-of-design-pattern
+      ,* @author: devinkin
+      ,* @create: 2019-07-22 12:45
+      ,* @description: 通用中介者类
+      ,**/
+     public class ConcreteMediator extends Mediator {
+
+         @Override
+         public void doSomething1() {
+             // 调用同事类的方法，只要是public方法都可以调用
+             super.c1.selfMethod1();
+             super.c2.selfMethod2();
+         }
+
+         @Override
+         public void doSomething2() {
+             super.c1.selfMethod1();
+             super.c2.selfMethod2();
+         }
+     }
+   #+end_src
+
+   抽象同事类
+   #+begin_src java
+     package mediator.session3;
+
+     /**
+      ,* @program: zen-of-design-pattern
+      ,* @author: devinkin
+      ,* @create: 2019-07-22 12:48
+      ,* @description: 抽象同事类
+      ,**/
+     public abstract class Colleague {
+         protected Mediator mediator;
+
+         public Colleague(Mediator mediator) {
+             this.mediator = mediator;
+         }
+     }
+   #+end_src
+
+   具体同事类1
+   #+begin_src java
+     package mediator.session3;
+
+     /**
+      ,* @program: zen-of-design-pattern
+      ,* @author: devinkin
+      ,* @create: 2019-07-22 12:41
+      ,* @description: 具体同事类1
+      ,**/
+     public class ConcreteColleague1 extends Colleague{
+         public ConcreteColleague1(Mediator mediator) {
+             super(mediator);
+         }
+
+         // 自有方法 self-method
+         public void selfMethod1() {
+             // 处理自己的业务逻辑
+         }
+
+         // 依赖方法 dep-method
+         public void depMethod1() {
+             // 处理自己的业务逻辑
+             // 自己不能处理的业务逻辑，委托给中介者处理
+             super.mediator.doSomething1();
+         }
+     }
+   #+end_src
+
+   具体同事类2
+   #+begin_src java
+     package mediator.session3;
+
+     /**
+      ,* @program: zen-of-design-pattern
+      ,* @author: devinkin
+      ,* @create: 2019-07-22 12:42
+      ,* @description: 具体同事类2
+      ,**/
+     public class ConcreteColleague2 extends Colleague{
+         public ConcreteColleague2(Mediator mediator) {
+             super(mediator);
+         }
+
+         // 自有方法 self-method
+         public void selfMethod2() {
+             // 处理自己的业务逻辑
+         }
+
+         // 依赖方法 dep-method
+         public void depMethod2() {
+             // 处理自己的业务逻辑
+             // 自己不能处理的业务逻辑，委托给中介者处理
+             super.mediator.doSomething2();
+         }
+     }
+   #+end_src
+
+   同事类中必须有中介者(用构造函数注入中介者)，中介者可以只有部分同事类(用getter/setter方法把同事类注入进来)。
+
+
+** 中介者模式的应用
+*** 中介者模式的优缺点
+    优点：可以减少类间的依赖，把原有的一对多依赖变成了一对一依赖。
+
+    缺点：中介者类会膨胀得很大，而且逻辑复杂。
+
+*** 中介者模式的实际应用
+    调度中心
+    MVC框架，Controller就是一个中介者，把Model(业务逻辑)和View(视图)隔离开。
+    媒体网关
+    中介服务
+
+*** 最佳实践
+    N个对象之间产生了互相的依赖(N>2)
+    多个对象有依赖关系，但是依赖的行为尚未确定或者有发生改变的可能。
+    产品开发。

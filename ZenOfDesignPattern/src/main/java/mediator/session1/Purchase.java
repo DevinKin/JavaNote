@@ -1,0 +1,35 @@
+package mediator.session1;
+
+/**
+ * @program: zen-of-design-pattern
+ * @author: devinkin
+ * @create: 2019-07-22 11:02
+ * @description: 采购管理类
+ **/
+public class Purchase {
+    // 采购IBM电脑
+    public void buyIBMcomputer(int number) {
+        // 访问库存
+        Stock stock = new Stock();
+
+        // 访问销售情况
+        Sale sale = new Sale();
+        int saleStatus = sale.getSaleStatus();
+
+        if (saleStatus > 80) {
+            // 销售情况良好
+            System.out.println("采购IBM电脑：" + number + "台");
+            stock.increase(number);
+        } else {
+            // 销售情况不好
+            int buyNumber = number / 2;     // 折半采购
+            System.out.println("采购IBM电脑：" + buyNumber + "台");
+            stock.increase(buyNumber);
+        }
+    }
+
+    // 不再采购IBM电脑
+    public void refuseBuyIBM() {
+        System.out.println("不再采购IBM电脑");
+    }
+}
