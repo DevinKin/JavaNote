@@ -21,4 +21,8 @@
 
 - [第十一章-建造者模式(bp)](./note/chapter11.org)
 
-- [第十二章-代理模式(pp)](./note/chapter12.org)
+- [第十三章-原型模式(prototype)](./note/chapter13.org)
+
+- [第十四章-中介者模式(mediator)](./note/chapter14.org)
+
+- [第十五章-命令模式(order)](./note/chapter15.org)

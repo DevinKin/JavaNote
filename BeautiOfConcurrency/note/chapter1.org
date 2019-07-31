@@ -1,0 +1,1035 @@
+* 第1章-并发编程线程基础
+** 什么是线程
+   线程是进程中的一个实体，线程本身是不会独立存在的。
+
+   进程是代码再数据集合上的一次运行活动，是系统进行资源分配的调度的基本单位，线程则是进程的一个执行路径。
+
+   一个进程中至少有一个线程，一个进程中的多个线程共享进程的资源。
+
+   操作系统在分配资源时是把资源分配给进程的。CPU资源是分配到线程的。所以线程是CPU分配的基本单位。
+
+   进程和线程的关系图如下
+   [[./images/thread1.png]]
+
+** 线程创建与运行
+   Java三种创建线程的方式
+   - 实现 ~Runnable~ 接口的 ~run~ 方法。
+   - 继承 ~Thread~ 类并重写 ~run~ 方法。
+   - 使用 ~FutureTask~ 方式。
+
+*** 继承Thread类方式
+    创建完 ~thread~ 对象后线程并没有被启动执行，直到调用了 ~start~ 方法后才真正启动了线程。
+
+    ~start~ 方法后线程没有立马执行而是处于就绪状态，该线程已经获取除了CPU资源外的其他资源，等待获取CPU资源后才会真正的运行。
+    #+begin_src java
+      package chapter1.create;
+
+      /**
+       ,* @program: BeautiOfConcurrency
+       ,* @author: devinkin
+       ,* @create: 2019-07-23 15:30
+       ,* @description: Thread类方式创建线程
+       ,**/
+      public class ThreadTest {
+
+          // 继承Thread类并重写run方法
+          public static class MyThread extends Thread {
+              @Override
+              public void run() {
+                  System.out.println("I am a child thread");
+              }
+          }
+
+          public static void main(String[] args) {
+              // 创建线程
+              MyThread thread = new MyThread();
+
+              // 启动线程
+              thread.start();
+          }
+      }
+    #+end_src
+
+    好处：在 ~run()~ 方法内获取当前线程直接使用 ~this~ 就可以了，无须使用 ~Thread.currentThread()~ 方法。
+
+    缺点：Java不支持多继承。继承了 ~Thread~ 类，就不能继承其他类。任务与代码没有分离。当多个线程执行一样的任务时需要多份任务代码。
+    
+*** 实现Runnable接口方式
+    优点： ~RunnableTask~ 可以继承其他类，可以添加参数进行任务区分。
+    缺点： 任务没有返回值。
+    #+begin_src java
+      package chapter1.create;
+
+      /**
+       ,* @program: BeautiOfConcurrency
+       ,* @author: devinkin
+       ,* @create: 2019-07-23 15:43
+       ,* @description: runnable方式
+       ,**/
+      public class RunnableTask implements Runnable{
+
+          public void run() {
+              System.out.println("I am a child thread");
+          }
+
+          public static void main(String[] args) {
+              RunnableTask task = new RunnableTask();
+              new Thread(task).start();
+              new Thread(task).start();
+          }
+      }
+    #+end_src
+
+*** 使用FutureTask的方式
+    优点：可以继承其他类，可以添加参数进行任务区分，并且任务有返回值。
+    #+begin_src java
+      package chapter1.create;
+
+      import java.util.concurrent.Callable;
+      import java.util.concurrent.ExecutionException;
+      import java.util.concurrent.FutureTask;
+
+      /**
+       ,* @program: BeautiOfConcurrency
+       ,* @author: devinkin
+       ,* @create: 2019-07-23 15:51
+       ,* @description: 使用FutureTask的方式
+       ,**/
+      public class FutureTaskTest {
+          // 创建任务类，类似Runnable
+          public static class CallerTask implements Callable<String> {
+              public String call() throws Exception {
+                  System.out.println("线程在执行啊");
+                  return "hello";
+              }
+          }
+
+          public static void main(String[] args) {
+              // 创建异步任务
+              FutureTask<String> futureTask = new FutureTask<String>(new CallerTask());
+
+              // 启动线程
+              new Thread(futureTask).start();
+
+              try {
+                  // 等待任务执行完毕，并返回结果
+                  String result = futureTask.get();
+                  System.out.println(result);
+              } catch (ExecutionException e) {
+                  e.printStackTrace();
+              } catch (InterruptedException e) {
+                  e.printStackTrace();
+              }
+          }
+      }
+    #+end_src
+
+** 线程通知与等待
+*** wait()函数
+    当一个线程调用一个共享变量的 ~wait()~ 方法时，该调用线程会被阻塞挂起。直到发生以下事件才返回
+    - 其他线程调用了该共享对象的 ~notify()~ 或者 ~notifyAll()~ 方法。
+    - 其他线程调用了该线程的 ~interrupt()~ 方法，改线程抛出 ~InterruptedException~ 异常返回。
+   
+    如果调用 ~wait()~ 方法的线程没有实现获取该对象的监视器锁，则调用 ~wait()~ 方法时调用线程会抛出 ~IllegalMonitorStateException~ 异常。
+ 
+    线程获得一个共享变量的监视器锁的方式
+    - 执行 ~synchronized~ 同步代码块时，使用该共享变量作为参数。
+    - 调用该共享变量的方法，并且该方法使用了 ~synchronized~ 修饰。
+    #+begin_src java
+      //(1)
+      synchronized(共享变量) {
+          // doSomething
+      }
+
+      //(2)
+      synchronized void add(int a, int b) {
+          // doSomething
+      }
+    #+end_src
+
+    一个线程可以从挂起状态变为可以运行状态（也就是被唤醒），即使该线程没有被其他线程调用 ~notify()~ 、 ~notifyAll()~ 方法进行通知，或者被中断，或者等待超时，这就是所谓的虚假唤醒。
+
+    防止虚假唤醒的操作：不停的测试该线程唤醒的条件是否满足，不满足则继续等待。
+
+    首先通过同步代码块获取obj上面的监视锁，然后在while循环内调用obj的wait()方法。
+    #+begin_src java
+      synchronized (obj) {
+          while (条件不满足) {
+              obj.wait();
+          }
+      }
+    #+end_src
+
+    生产者线程和消费者线程案例
+    #+begin_src java
+      synchronized (queue) {
+          // 消费者队列满，等待队列空闲
+          while (queue.size() == MAX_SIZE) {
+              try {
+                  // 挂起当前线程，并释放同步代码块获取的queue上的锁，让消费者线程可以获得该锁，然后获取队列里面的元素
+                  queue.wait();
+              } catch(Exception ex) {
+                  ex.printStackTrace();
+              }
+          }
+
+          // 空闲则生成元素，并通知消费者线程
+          queue.add(ele);
+          queue.notifyAll();
+      }
+
+
+      // 消费者线程
+      synchronized (queue) {
+          // 消费队列为空
+          while (queue.size() == 0) {
+              try {
+                  // 挂起当前线程，并释放通过同步代码块获取的queue上的锁，让生产者线程可以获取该锁，产生生产元素放入队列。
+                  queue.wait();
+              } catch (Exception ex) {
+                  ex.printStackTrace();
+              }
+          }
+
+          // 消费元素，并通知唤醒生产者线程
+          queue.take();
+          queue.notifyAll();
+      }
+    #+end_src
+
+    下面的代码说明了当线程调用共享对象的 =wait()= 方法时，当前线程指会释放当前共享对象的锁，当前线程持有的其他共享对象的监视器锁并不会释放。
+    #+begin_src java
+      package chapter1.create;
+
+      /**
+       ,* @program: BeautiOfConcurrency
+       ,* @author: devinkin
+       ,* @create: 2019-07-23 17:39
+       ,* @description: 线程等待测试类
+       ,**/
+      public class WaitNotifyTest {
+          // 创建资源
+          private static volatile Object resourceA = new Object();
+          private static volatile Object resourceB = new Object();
+
+          public static void main(String[] args) throws InterruptedException {
+              Thread threadA = new Thread(new Runnable() {
+                  public void run() {
+                      try {
+                          // 获取resourceA共享资源的监视器锁
+                          synchronized (resourceA) {
+                              System.out.println("threadA get resourceA lock");
+
+                              // 获取resourceB共享资源的监视器锁
+                              synchronized (resourceB) {
+                                  System.out.println("threadA get resourceB lock");
+
+                                  // 线程A阻塞，并释放到获取到的resourceA的锁
+                                  System.out.println("threadA release resourceA lock");
+                                  resourceA.wait();
+                              }
+                          }
+                      } catch (InterruptedException e) {
+                          e.printStackTrace();
+                      }
+                  }
+              });
+
+              // 创建线程
+              Thread threadB = new Thread(new Runnable() {
+                  public void run() {
+                      try {
+                          // 休眠1秒
+                          Thread.sleep(1000);
+
+                          // 获取resourceA共享资源的监视器锁
+                          synchronized (resourceA) {
+                              System.out.println("threadB get resourceA lock");
+
+                              System.out.println("ThreadB try get resourceB lock...");
+
+                              // 获取resourceB共享资源的监视器锁
+                              synchronized (resourceB) {
+                                  System.out.println("threadB get resourceB lock");
+
+                                  // 线程B阻塞，并释放获取到的resourceA的锁
+                                  System.out.println("threadB release resourceA lock");
+                                  resourceA.wait();
+                              }
+                          }
+                      } catch (InterruptedException e) {
+                          e.printStackTrace();
+                      }
+                  }
+              });
+
+              // 启动线程
+              threadA.start();
+              threadB.start();
+
+              // 等待两个线程结束
+              threadA.join();
+              threadB.join();
+
+              System.out.println("main over");
+          }
+      }
+    #+end_src
+
+    当一个线程调用共享对象的 ~wait()~ 方法被阻塞挂起后，如果其他线程中断了该线程，则该线程会抛出 ~InterruptedException~ 异常并返回。
+    #+begin_src java
+      package chapter1.wait;
+
+      /**
+       ,* @program: BeautiOfConcurrency
+       ,* @author: devinkin
+       ,* @create: 2019-07-29 11:41
+       ,* @description: 线程中断测试类
+       ,**/
+      public class WaitNotifyInterupt {
+          static Object obj = new Object();
+
+          public static void main(String[] args) throws InterruptedException {
+              // 创建线程
+              Thread threadA = new Thread(new Runnable() {
+                      public void run() {
+                          try {
+                              System.out.println("---begin---");
+                              // 阻塞当前线程
+                              synchronized (obj) {
+                                  obj.wait();
+                              }
+                              System.out.println("---end---");
+                          } catch (InterruptedException e) {
+                              e.printStackTrace();
+                          }
+                      }
+                  });
+
+              threadA.start();
+
+              Thread.sleep(1000);
+
+              System.out.println("---begin interrupt threadA---");
+              threadA.interrupt();
+              System.out.println("---end interrupt threadA---");
+          }
+      }
+    #+end_src
+
+*** wait(long timeout)函数
+     如果一个线程调用共享对象的该方法挂起后，没有在指定的 ~timeout~ ms时间内被其他线程调用该共享变量的 ~notify()~ 或者 ~notifyAll()~ 方法唤醒，那么该方法还是会因为超时而返回。
+
+     ~timeout~ 设置为0与 ~wait~ 方法效果一致。
+
+*** wait(long timeout, int nanos)函数
+     当 ~nanos>0~ 时才使参数 ~timeout~ 递增1。
+
+*** notify()函数
+     一个线程的共享对象的 ~notify()~ 方法后，会唤醒一个在该共享变量上调用 ~wait~ 系列的方法后被挂起的线程。
+
+     一个共享变量上可能会有多个线程在等待，具体唤醒那个等待的线程是随机的。
+
+     被唤醒的线程不能马上从 ~wait~ 方法返回并继续执行，它必须获取了共享对象的监视器锁才可以返回。
+
+     只有当前线程获取到了共享变量的监视器锁后，才可以调用共享对象的 ~notify()~ 方法。
+
+*** notifyAll函数
+     ~notifyAll()~ 方法则会唤醒所有在该共享变量上由于调用 ~wait~ 系列方法而被挂起的线程。
+
+     调用 ~notifyAll()~ 方法
+** 等待线程执行终止的join方法
+   ~Object~ 类的 ~join()~ 方法可以让多个线程全部加载完汇总处理。该方法无参且返回值为 ~void~ 。
+
+   主线程会在调用 ~threadOne.join()~ 后被阻塞，等待 ~threadOne~ 执行完毕后返回。 ~threadTwo~ 同理。
+   #+begin_src java
+     package chapter1.join;
+
+     /**
+      ,* @program: BeautiOfConcurrency
+      ,* @author: devinkin
+      ,* @create: 2019-07-30 12:50
+      ,* @description: 线程join测试类
+      ,**/
+     public class JoinTest {
+         public static void main(String[] args) throws InterruptedException {
+             Thread threadOne = new Thread(new Runnable() {
+                 public void run() {
+                     try {
+                         Thread.sleep(1000);
+                     } catch (InterruptedException e) {
+                         e.printStackTrace();
+                     }
+                     System.out.println("child threadOne over!");
+                 }
+             });
+
+             Thread threadTwo = new Thread(new Runnable() {
+                 public void run() {
+                     try {
+                         Thread.sleep(1000);
+                     } catch (InterruptedException e) {
+                         e.printStackTrace();
+                     }
+                     System.out.println("child threadTwo over!");
+                 }
+             });
+
+             // 启动子线程
+             threadOne.start();
+             threadTwo.start();
+
+             System.out.println("wait all child thread over!");
+
+             // 等待线程执行完毕，返回
+             threadOne.join();
+             threadTwo.join();
+
+             System.out.println("all child thread over!");
+         }
+     }
+   #+end_src
+
+   当线程A调用了线程B的 ~join()~ 方法后，线程A会被阻塞，当其他线程调用了线程A的 ~interrupt()~ 方法后，线程A会抛出 ~InterruptedException~ 异常并返回。
+   #+begin_src java
+     package chapter1.join;
+
+     /**
+      ,* @program: BeautiOfConcurrency
+      ,* @author: devinkin
+      ,* @create: 2019-07-30 17:58
+      ,* @description:
+      ,**/
+     public class JoinInterruptedExceptionTest {
+         public static void main(String[] args) {
+             // 线程one
+             Thread threadOne = new Thread(new Runnable() {
+                 public void run() {
+                     System.out.println("threadOne begin run!");
+                     for (;;) {
+
+                     }
+                 }
+             });
+
+             // 获取主线程
+             final Thread mainThread = Thread.currentThread();
+
+             // 线程two
+             Thread threadTwo = new Thread(new Runnable() {
+                 public void run() {
+                     // 休眠1s
+                     try {
+                         Thread.sleep(1000);
+                     } catch (InterruptedException e) {
+                         e.printStackTrace();
+                     }
+
+
+                     // 中断主线程
+                     mainThread.interrupt();
+                 }
+             });
+
+             // 启动子线程
+             threadOne.start();
+
+             // 延迟1s启动线程
+             threadTwo.start();
+
+             try {
+                 // 等待线程one执行结束
+                 threadOne.join();
+             } catch (InterruptedException e) {
+                 System.out.println("main thread: " + e);
+             }
+         }
+     }
+   #+end_src
+
+** 让线程睡眠的sleep方法
+   ~Thread~ 类有一个静态的 ~sleep~ 方法。
+
+   当一个执行中的线程调用了 ~Thread~ 的 ~sleep~ 方法后，调用线程会暂时让出指定时间的执行权，这期间不参与CPU的调度。
+
+   线程睡眠期间该线程所拥有的监视器资源，比如锁还是持有不让出。
+   #+begin_src java
+     package chapter1.sleep;
+
+     import java.util.concurrent.locks.Lock;
+     import java.util.concurrent.locks.ReentrantLock;
+
+     /**
+      ,* @program: BeautiOfConcurrency
+      ,* @author: devinkin
+      ,* @create: 2019-07-30 18:18
+      ,* @description: 线程睡眠资源释放测试类
+      ,**/
+     public class SleepTest2 {
+         // 创建一个独占锁
+         private static final Lock lock = new ReentrantLock();
+
+         public static void main(String[] args) {
+             // 创建线程A
+             Thread threadA = new Thread(new Runnable() {
+                 public void run() {
+                     // 获取独占锁
+                     lock.lock();
+                     try {
+                         System.out.println("child threadA is in sleep");
+
+                         Thread.sleep(10000);
+
+                         System.out.println("child threadA is awaked");
+                     } catch (InterruptedException e) {
+                         e.printStackTrace();
+                     } finally {
+                         // 释放锁
+                         lock.unlock();
+                     }
+                 }
+             });
+
+             // 创建线程B
+             Thread threadB = new Thread(new Runnable() {
+                 public void run() {
+                     // 获取独占锁
+                     lock.lock();
+                     System.out.println("child threadB is in sleep");
+
+                     try {
+                         Thread.sleep(10000);
+
+                         System.out.println("child threadB is in awaked");
+                     } catch (InterruptedException e) {
+                         e.printStackTrace();
+                     } finally {
+                         // 释放锁
+                         lock.unlock();
+                     }
+                 }
+             });
+
+             threadA.start();
+             threadB.start();
+         }
+     }
+   #+end_src
+
+   指定的睡眠时间到了后该函数会正常返回，线程就处于就绪状态，然后参与CPU的调度，获取到CPU资源后就可以继续运行了。
+
+   线程睡眠期间调用了该线程的 ~interrupt()~ 方法中断了该线程，则线程会在调用 ~sleep~ 方法的地方抛出 ~InterruptedException~ 异常而返回。
+   #+begin_src java
+     package chapter1.sleep;
+
+     /**
+      ,* @program: BeautiOfConcurrency
+      ,* @author: devinkin
+      ,* @create: 2019-07-30 18:33
+      ,* @description: 睡眠测试interrupt类
+      ,**/
+     public class SleepTest {
+         public static void main(String[] args) throws InterruptedException {
+             // 创建线程
+             Thread thread = new Thread(new Runnable() {
+                     public void run() {
+                         try {
+                             System.out.println("child thread is in sleep");
+
+                             Thread.sleep(10000);
+                             System.out.println("child thread is in awaked");
+                         } catch (InterruptedException e) {
+                             e.printStackTrace();
+                         }
+                     }
+                 });
+
+             // 启动线程
+             thread.start();
+
+             // 主线程休眠两秒
+             Thread.sleep(2000);
+
+             // 主线程中断子线程
+             thread.interrupt();
+         }
+     }
+   #+end_src
+
+   在调用 ~Thread.sleep(long millis)~ 时， ~millis~ 惨传递一个负数，会抛出 ~IllegalArgumentException~ 异常。
+** 让出CPU执行的yield方法
+   ~Thread~ 类有一个静态的 ~yield~ 方法，当一个线程调用 ~yield~ 方法时，实际就是在按时线程调度器当前线程请求让出自己的CPU使用，但是线程调度器可以无条件的忽略这个暗示。
+
+   当一个线程调用 ~yield~ 方法时，当前线程会让出CPU使用权，然后处于就绪状态，线程调度器会从线程就绪队列中获取一个线程优先级最高的线程，有可能会调度到刚刚让出CPU的那个线程来获取CPU执行权。
+   #+begin_src java
+     package chapter1.sleep;
+
+     /**
+      ,* @program: BeautiOfConcurrency
+      ,* @author: devinkin
+      ,* @create: 2019-07-30 18:48
+      ,* @description: yield测试类
+      ,**/
+     public class YieldTest implements Runnable{
+         YieldTest() {
+             // 创建并启动线程
+             Thread t = new Thread(this);
+             t.start();
+         }
+
+         public void run() {
+             for (int i = 0; i < 5; i++) {
+                 if ((i % 5) == 0) {
+                     System.out.println(Thread.currentThread() + "yield cpu...");
+
+                     // 当前线程让出CPU执行权，放弃时间片，进行下一轮调度
+                     Thread.yield();
+                 }
+             }
+             System.out.println(Thread.currentThread() + " is over");
+         }
+
+         public static void main(String[] args) {
+             new YieldTest();
+             new YieldTest();
+             new YieldTest();
+         }
+     }
+   #+end_src
+
+   一般很少使用这个方法，在调试或者测试时这个方法或许可以帮助复现由于并发竞争条件导致的问题。
+
+   ~sleep~ 与 ~yield~ 方法的区别在于
+   - 当前线程 ~sleep~ 方法时调用线程会被阻塞挂起指定的时间，在这期间线程调度器不会去调度该线程。
+   - 调用 ~yield~ 方法时，线程只是让出自己剩余的时间片，并没有阻塞挂起，而是处于就绪状态，线程调度器下一次调度时就有可能调度到当前线程执行。
+** 线程中断
+   Java中的线程中断是一种线程间的协作模式，通过设置线程的中断标志并不能直接终止该线程的执行，而是被中断的线程根据中断状态自行处理。
+
+   ~void interrupt()~ 方法用于中断线程。该方法仅仅用于设置标志，被中断的线程实际并没有被中断。如果被中断的线程调用了 ~wait、join、sleep~ 方法而被阻塞挂起，这时线程被 ~interrupt()~ 方法中断，会抛出 ~InterruptedException~ 异常而返回。
+
+   ~boolean isInterrupted()~ 方法用于检测线程是否被中断。
+   #+begin_src java
+     package chapter1.interrupt;
+
+     /**
+      ,* @program: BeautiOfConcurrency
+      ,* @author: devinkin
+      ,* @create: 2019-07-30 19:17
+      ,* @description: 中断线程测试类
+      ,**/
+     public class InterruptedTest {
+         public static void main(String[] args) throws InterruptedException {
+             Thread thread = new Thread(new Runnable() {
+                     public void run() {
+                         // 如果当前线程被中断则退出循环
+                         while (!Thread.currentThread().isInterrupted()) {
+                             System.out.println(Thread.currentThread() + " hello");
+                         }
+                     }
+                 });
+
+             // 启动子线程
+             thread.start();
+
+             // 主线程休眠1s，以便中断前让子线程输出
+             Thread.sleep(1000);
+
+             // 中断子线程
+             System.out.println("main thread interrupt thread");
+             thread.interrupt();
+
+             // 等待子线程执行完毕
+             thread.join();
+             System.out.println("main is over");
+         }
+     }
+   #+end_src
+
+   ~boolean interrupted()~ 方法用于检测线程是否被中断。如果当前线程被中断，则会清除中断标志，并且该方法是 ~static~ 方法。 ~interrupted()~ 方法内部获取当前线程的中断标志而不是调用 ~interrupted()~ 方法的实例对象的中断标志。
+   #+begin_src java
+     package chapter1.interrupt;
+
+     /**
+      ,* @program: BeautiOfConcurrency
+      ,* @author: devinkin
+      ,* @create: 2019-07-31 11:24
+      ,* @description: 线程睡眠中断测试类
+      ,**/
+     public class SleepInterruptTest2 {
+         public static void main(String[] args) throws InterruptedException {
+             Thread threadOne = new Thread(new Runnable() {
+                 public void run() {
+                     for (;;) {
+
+                     }
+                 }
+             });
+
+             // 启动线程
+             threadOne.start();
+
+             // 设置中断标志
+             threadOne.interrupt();
+
+             // 获取threadOne中断标志并重置
+             System.out.println("isInterrupted: " + threadOne.isInterrupted());
+
+             // 获取当前线程(mainThread)中断标志并重置
+             System.out.println("isInterrupted: " + threadOne.interrupted());
+
+             // 获取当前线程(mainThread)中断标志并重置
+             System.out.println("isInterrupted: " + Thread.interrupted());
+
+             // 获取threadOne中断标志
+             System.out.println("isInterrupted: " + threadOne.isInterrupted());
+
+             threadOne.join();
+             System.out.println("main thread is over");
+         }
+     }
+   #+end_src
+
+   在子线程中使用 ~interrupted()~ 方法判断当前线程是否被中断。
+   #+begin_src java
+     package chapter1.interrupt;
+
+     /**
+      ,* @program: BeautiOfConcurrency
+      ,* @author: devinkin
+      ,* @create: 2019-07-31 11:38
+      ,* @description: 线程睡眠中断测试类
+      ,**/
+     public class SleepInterruptTest3 {
+         public static void main(String[] args) throws InterruptedException {
+             Thread threadOne = new Thread(new Runnable() {
+                     public void run() {
+                         // 中断标志位为true时会退出循环，并且清除中断标志由true变为false
+                         while (!Thread.currentThread().interrupted()) {
+
+                         }
+                         System.out.println("threadOne isInterrupted: " + Thread.currentThread().isInterrupted());
+                     }
+                 });
+
+             // 启动线程
+             threadOne.start();
+
+             // 设置中断标志
+             threadOne.interrupt();
+
+             threadOne.join();
+             System.out.println("main thread is over");
+         }
+     }
+   #+end_src
+
+   可以使用 ~interrupt()~ 方法中断调用了 ~sleep~ 函数、 ~wait~ 函数或者 ~join~ 函数挂起的线程。
+   #+begin_src java
+     package chapter1.interrupt;
+
+     /**
+      ,* @program: BeautiOfConcurrency
+      ,* @author: devinkin
+      ,* @create: 2019-07-31 11:00
+      ,* @description: 线程睡眠中断测试类
+      ,**/
+     public class SleepInterruptTest {
+         public static void main(String[] args) throws InterruptedException {
+             Thread threadOne = new Thread(new Runnable() {
+                 public void run() {
+                     try {
+                         System.out.println("threadOne begin sleep for 2000 seconds");
+                         Thread.sleep(2000000);
+                         System.out.println("threadOne awaking");
+                     } catch (InterruptedException e) {
+                         e.printStackTrace();
+                     }
+
+                     System.out.println("threadOne-leaving normally");
+                 }
+             });
+
+             // 启动线程
+             threadOne.start();
+
+             // 确保子线程进入休眠状态
+             Thread.sleep(1000);
+
+             // 打断子线程的休眠，让子线程从sleep函数返回
+             threadOne.interrupt();
+
+             // 等待子线程执行完毕
+             threadOne.join();
+
+             System.out.println("main thread is over");
+         }
+     }
+   #+end_src
+** 理解上下文切换
+   在多线程编程中，线程个数一般大于CPU个数，而每个CPU同一时刻只能被一个线程使用。多线程同时执行时，CPU资源的分配采用了时间片轮转的策略。
+
+   当前线程使用完时间片后，就会处于就绪状态并且让出CPU让其他线程占用，这就是上下文切换，从当前线程的上下文切换到其他线程的上下文。
+
+   线程上下文切换时机有
+   - 当前线程的CPU时间片使用完处于就绪状态时
+   - 当前线程被其他线程中断时
+
+** 线程死锁
+   死锁是指两个或两个以上的线程在执行过程中，因争夺资源而造成的互相等待的现象，在无外力的作用下，线程会一直互相等待无法继续运行下去。
+
+   死锁的产生必须具有以下四个条件
+   - 互斥条件：指线程对已经获取到的资源进行排它性使用，即该资源同时只由一个线程占用。
+   - 请求并持有条件：指一个线程已经持有了至少一个资源，但又提出了新的资源请求，而新的资源已被其他线程占有，所以当前线程会被阻塞，同时并不释放自己已经获取的资源。
+   - 不可剥夺条件：指线程获取到的资源在自己使用完之前不能被其他线程抢占，只有自己使用完毕后才由自己释放该资源。
+   - 环路等待：指在发生死锁时，比如存在一个线程一资源的环形链。
+   
+   死锁实例代码
+   #+begin_src java
+     package chapter1.deadlock;
+
+     /**
+      ,* @program: BeautiOfConcurrency
+      ,* @author: devinkin
+      ,* @create: 2019-07-31 12:27
+      ,* @description: 死锁测试类
+      ,**/
+     public class DeadLockTest {
+         // 创建资源
+         private static Object resourceA = new Object();
+
+         private static Object resourceB = new Object();
+
+         public static void main(String[] args) {
+             // 创建线程A
+             Thread threadA = new Thread(() -> {
+                 synchronized (resourceA) {
+                     System.out.println(Thread.currentThread() + " get ResourceA");
+
+                     try {
+                         Thread.sleep(1000);
+                     } catch (InterruptedException e) {
+                         e.printStackTrace();
+                     }
+
+                     System.out.println(Thread.currentThread() + " waiting get resourceB");
+                     synchronized (resourceB) {
+                         System.out.println(Thread.currentThread() + " get ResourceB");
+                     }
+                 }
+             });
+
+             // 创建线程B
+             Thread threadB = new Thread(() -> {
+                 synchronized (resourceB) {
+                     System.out.println(Thread.currentThread() + " get ResourceB");
+
+                     try {
+                         Thread.sleep(1000);
+                     } catch (InterruptedException e) {
+                         e.printStackTrace();
+                     }
+
+                     System.out.println(Thread.currentThread() + " waiting get resourceA");
+                     synchronized (resourceA) {
+                         System.out.println(Thread.currentThread() + " get ResourceA");
+                     }
+                 }
+             });
+
+             // 启动线程
+             threadA.start();
+             threadB.start();
+         }
+     }
+   #+end_src
+
+   资源申请有序性破坏资源的请求并持有条件和环路等待条件避免死锁
+   #+begin_src java
+     package chapter1.deadlock;
+
+     /**
+      ,* @program: BeautiOfConcurrency
+      ,* @author: devinkin
+      ,* @create: 2019-07-31 14:51
+      ,* @description: 资源申请有序测试类
+      ,**/
+     public class DeadLockTest2 {
+         private static Object resourceA = new Object();
+         private static Object resourceB = new Object();
+
+         public static void main(String[] args) {
+             Thread threadA = new Thread(() ->{
+                 synchronized (resourceA) {
+                     System.out.println(Thread.currentThread() + " get ResourceA");
+
+                     try {
+                         Thread.sleep(1000);
+                     } catch (InterruptedException e) {
+                         e.printStackTrace();
+                     }
+
+                     System.out.println(Thread.currentThread() + " waiting get resourceB");
+                     synchronized (resourceB) {
+                         System.out.println(Thread.currentThread() + " get ResourceB");
+                     }
+                 }
+             });
+
+             Thread threadB = new Thread(() -> {
+                 synchronized (resourceA) {
+                     System.out.println(Thread.currentThread() + " get ResourceA");
+
+                     try {
+                         Thread.sleep(1000);
+                     } catch (InterruptedException e) {
+                         e.printStackTrace();
+                     }
+
+                     System.out.println(Thread.currentThread() + " waiting get ResourceB");
+                     synchronized (resourceB) {
+                         System.out.println(Thread.currentThread() + " get ResourceB");
+                     }
+                 }
+             });
+
+             threadA.start();
+             threadB.start();
+         }
+     }
+   #+end_src
+** 守护线程与用户线程
+   Java中的线程分为两类
+   - daemon线程(守护线程)
+   - user线程(用户线程)
+
+   守护线程和用户线程的区别
+   - 守护线程是否结束并不影响JVM的退出。
+   - 只有要一个用户线程还没结束，正常情况下JVM就不会退出。
+   
+   Java创建一个守护线程
+   #+begin_src java
+     package chapter1.daemon;
+
+     /**
+      ,* @program: BeautiOfConcurrency
+      ,* @author: devinkin
+      ,* @create: 2019-07-31 15:06
+      ,* @description: 守护线程
+      ,**/
+     public class DaemonThread {
+         public static void main(String[] args) {
+             Thread daemonThread = new Thread(() -> {
+             });
+
+             // 设置为守护线程
+             daemonThread.setDaemon(true);
+             daemonThread.start();
+         }    
+     }
+   #+end_src
+   
+   如果希望在主线程结束后JVM进程马上结束，那么在创建线程时可以将其设置为守护线程。如果希望在主线程结束后子线程继续工作，等子线程结束后再让JVM进程结束，就将子线程设置为用户线程。
+** ThreadLocal
+   ~ThreadLocal~ 提供了线程本地的变量，如果你创建了一个 ~ThreadLocal~ 变量，那么这个变量的每个线程都会有这个变量的一个本地副本(复制变量到本地内存)。
+
+   当多线程操作 ~ThreadLocal~ 提供的变量时，实际操作的是自己本地内存里面的变量，从而避免了线程安全问题。
+
+   ~ThreadLocal~ 使用实例
+   #+begin_src java
+     package chapter1.threadlocal;
+
+     /**
+      ,* @program: BeautiOfConcurrency
+      ,* @author: devinkin
+      ,* @create: 2019-07-31 15:47
+      ,* @description: ThreadLocal使用实例
+      ,**/
+     public class ThreadLocalTest {
+         static void print(String str) {
+             System.out.println(str + " : " + localVariable.get());
+             localVariable.remove();
+         }
+
+         static ThreadLocal<String> localVariable = new ThreadLocal<>();
+
+         public static void main(String[] args) {
+             Thread threadOne = new Thread(() -> {
+                     localVariable.set("threadOne local variable");
+                     print("threadOne");
+                     System.out.println("threadOne remove after: " + localVariable.get());
+             });
+
+             Thread threadTwo = new Thread(() -> {
+                     localVariable.set("threadTwo local variable");
+                     print("threadTwo");
+                     System.out.println("threadTwo remove after: " + localVariable.get());
+             });
+
+             threadOne.start();
+             threadTwo.start();
+         }
+     }
+   #+end_src
+
+*** ThreadLocal实现原理
+    ~Thread~ 类有一个 ~threadLocals~ 和一个 ~inheritableThreadLocals~ 变量，类型为 ~ThreadLocalMap~ 类型的map，定制化的 ~HashMap~ 。
+
+    默认情况下这两个变量都为 ~null~ ，只有线程第一次调用 ~ThreadLocal~ 的 ~set~ 或 ~get~ 方法才会创建他们。
+
+    每个线程的本地变量是存放在调用线程的 ~threadLocals~ 里面。
+
+    总结：每个线程内部都有一个名为 ~threadLocals~ 的成员变量，该变量的类型为 ~HashMap~ ，其中 ~key~ 为我们定义的 ~ThreadLocal~ 变量的 ~this~ 引用， ~value~ 则为我们使用 ~set~ 方法设置的值。如果当前线程一直不消亡，那么这些变量会一直存在，可能造成内存溢出。线程变量使用完毕后记得调用 ~ThreadLocal~ 的 ~remove~ 方法删除对应线程的 ~threadLocals~ 中的本地变量。
+    
+
+*** ThreadLocal不支持继承性
+    同一个 ~ThreadLocal~ 变量在父线程中被设置后，在子线程中是获取不到的。
+    #+begin_src java
+      package chapter1.threadlocal;
+
+      /**
+       ,* @program: BeautiOfConcurrency
+       ,* @author: devinkin
+       ,* @create: 2019-07-31 16:34
+       ,* @description: 测试ThreadLocal不支持继承性
+       ,**/
+      public class TestThreadLocal {
+          public static ThreadLocal<String> threadLocal = new ThreadLocal<>();
+
+          public static void main(String[] args) {
+              threadLocal.set("hello world");
+              Thread thread = new Thread(() -> {
+                      System.out.println("thread: " + threadLocal.get());
+              });
+              thread.start();
+              System.out.println("main: " + threadLocal.get());
+          }
+      }
+    #+end_src
+
+*** InheritableThreadLocal类
+    ~InheritableThreadLocal~ 类可以让子线程访问在父线程中设置的本地变量。
+
+    ~InheritableThreadLocal~ 类重写了 ~ThreadLocal~ 的 ~getMap()~ 和 ~createMap()~ 方法让本地变量好存到了具体的线程的 ~inheritableThreadLocals~ 变量里面。线程通过 ~InheritableThreadLocal~ 类实例的 ~set~ 或 ~get~ 方法设置变量时，就会创建当前线程的 ~inheritableThreadLocals~ 变量。 当父线程创建子线程时，构造函数会把父线程中的 ~inheritableThreadLocals~ 变量里面的本地变量复制一份到子线程的 ~inheritableThreadLocals~ 变量里面。
+    #+begin_src java
+      package chapter1.threadlocal;
+
+      /**
+       ,* @program: BeautiOfConcurrency
+       ,* @author: devinkin
+       ,* @create: 2019-07-31 16:34
+       ,* @description: 测试ThreadLocal不支持继承性
+       ,**/
+      public class TestThreadLocal {
+          //    public static ThreadLocal<String> threadLocal = new ThreadLocal<>();
+          public static ThreadLocal<String> threadLocal = new InheritableThreadLocal<>();
+
+          public static void main(String[] args) {
+              threadLocal.set("hello world");
+              Thread thread = new Thread(() -> {
+                      System.out.println("thread: " + threadLocal.get());
+              });
+              thread.start();
+              System.out.println("main: " + threadLocal.get());
+          }
+      }
+    #+end_src
