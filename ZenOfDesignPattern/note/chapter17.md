@@ -1,0 +1,158 @@
+- [装饰者模式](#sec-1)
+  - [装饰模式的应用](#sec-1-1)
+    - [装饰模式的使用场景](#sec-1-1-1)
+  - [最佳实践](#sec-1-2)
+
+# 装饰者模式<a id="sec-1"></a>
+
+装饰者模式(Decorator Pattern)动态的给一个对象添加一些额外的职责。就功能来说，装饰模式比生成子类更为灵活。
+
+装饰模式的四个角色
+
+-   Component抽象构件
+-   ConcreteComponent具体构件
+-   Decorator抽象装饰角色
+-   ConcreteDecorator具体装饰角色
+
+在装饰模式中，必然由一个最基本、最核心、最原始的接口或抽象类充当 `Component` 抽象构件。
+
+```java
+package decorate.session3;
+
+/**
+ * @program: zen-of-design-pattern
+ * @author: devinkin
+ * @create: 2019-08-02 14:56
+ * @description: 抽象构件
+ **/
+public abstract class Component {
+    // 抽象的方法
+    public abstract void operate();
+}
+
+```
+
+具体构件
+
+```java
+package decorate.session3;
+
+/**
+ * @program: zen-of-design-pattern
+ * @author: devinkin
+ * @create: 2019-08-02 14:56
+ * @description: 具体构件
+ **/
+public class ConcreteComponent extends Component{
+    @Override
+    public void operate() {
+        System.out.println("do something");
+    }
+}
+```
+
+抽象装饰者
+
+```java
+package decorate.session3;
+
+/**
+ * @program: zen-of-design-pattern
+ * @author: devinkin
+ * @create: 2019-08-02 15:00
+ * @description: 抽象装饰者
+ **/
+public class Decorator extends Component{
+    private Component component = null;
+
+    // 通过构造函数传递被修饰者
+    public Decorator(Component component) {
+        this.component = component;
+    }
+
+    // 委托被修饰这执行
+    @Override
+    public void operate() {
+        this.component.operate();
+    }
+}
+```
+
+具体的装饰类
+
+```java
+package decorate.session3;
+
+/**
+ * @program: zen-of-design-pattern
+ * @author: devinkin
+ * @create: 2019-08-02 15:02
+ * @description: 具体的装饰类
+ **/
+public class ConcreteDecorator1 extends Decorator{
+    public ConcreteDecorator1(Component component) {
+        super(component);
+    }
+
+    // 定义自己的修饰方法
+    private void method1() {
+        System.out.println("method1 修饰");
+    }
+
+    // 重写父类的Operation方法
+
+    @Override
+    public void operate() {
+        this.method1();
+        super.operate();
+    }
+}
+```
+
+场景类
+
+```java
+package decorate.session3;
+
+/**
+ * @program: zen-of-design-pattern
+ * @author: devinkin
+ * @create: 2019-08-02 15:05
+ * @description: 场景类
+ **/
+public class Client {
+    public static void main(String[] args) {
+        Component component = new ConcreteComponent();
+        // 第一次修饰
+        component = new ConcreteDecorator1(component);
+        // 第二次修饰
+        component = new ConcreteDecorator2(component);
+        // 修饰后运行
+        component.operate();
+    }
+}
+```
+
+## 装饰模式的应用<a id="sec-1-1"></a>
+
+优点
+
+-   装饰类和被装饰类可以独立发展，而不会相互耦合。
+-   装饰模式是继承关系的一个替代方案。实现的还是 `is-a` 关系。
+-   装饰模式可以动态扩展一个实现类的功能。
+
+缺点
+
+-   多层装饰比较复杂，回溯错误比较麻烦。
+
+### 装饰模式的使用场景<a id="sec-1-1-1"></a>
+
+-   需要扩展一个类的功能，或给一个类增加附加功能。
+-   需要动态地给一个对象增加功能，这些功能可以再动态地撤销。
+-   需要为一批的兄弟类进行改装或者加装功能，首选装饰模式。
+
+## 最佳实践<a id="sec-1-2"></a>
+
+装饰模式可以替代继承，解决类膨胀问题。
+
+继承是静态地给类增加功能，装饰模式是动态地增加功能。
