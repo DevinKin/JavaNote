@@ -77,7 +77,7 @@
 
    ~ThreadLocalRandom~ 类继承了 ~Random~ 类并重写了 ~nextInt~ 方法。
 
-   ~ThreadLocalRandom~ 类没有使用继承字 ~Random~ 类的原子性种子变量。
+   ~ThreadLocalRandom~ 类没有使用继承自 ~Random~ 类的原子性种子变量。
    
    ~ThreadLocalRandom~ 中没有存放具体的种子，具体的种子存放再具体的调用线程的 ~threadLocalRandomSeed~ 变量里面。
 

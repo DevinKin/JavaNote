@@ -186,7 +186,7 @@ public final long getAndSetLong(Object obj, long offset, long update) {
 }
 ```
 
-`long getAndSetLong(Object obj, long offset, long addValue)` 方法：获取对象 `obj` 中偏移量为 `offset` 的变量 `volatile` 语义的当前值，并设置变量值为原始值 + `addValue` 。
+`long getAndAddLong(Object obj, long offset, long addValue)` 方法：获取对象 `obj` 中偏移量为 `offset` 的变量 `volatile` 语义的当前值，并设置变量值为原始值 + `addValue` 。
 
 ```java
 public final long getAndAddLong(Object obj, long offset, long addValue) {
