@@ -1,0 +1,173 @@
+* 第18章-策略模式
+** 策略模式的定义
+   策略模式（Strategy Pattern）是一种比较简单的模式，也叫做政策模式（Policy Pattern）。
+
+   策略模式定义：定义一组算法，把每个算法都封装起来，并且它们之间可以互换。
+
+   策略模式使用的就是面向对象的继承和多态机制。策略模式的三个角色：
+   - ~Context~ 封装角色。
+   - ~Strategy~ 抽象策略角色。
+   - ~ConcreteStrategy~ 具体策略角色。
+   
+   抽象策略角色
+   #+begin_src java
+     package strategy.session2;
+
+     public interface Strategy {
+         // 策略模式的运算法则
+         public void doSomething();
+     }
+   #+end_src
+
+   具体策略角色
+   #+begin_src java
+     package strategy.session2;
+
+     /**
+      ,* @program: zen-of-design-pattern
+      ,* @author: devinkin
+      ,* @create: 2019-08-07 10:39
+      ,* @description: 具体策略角色1
+      ,**/
+     public class ConcreteStrategy1 implements Strategy{
+         @Override
+         public void doSomething() {
+             System.out.println("具体策略1的运算法则");
+         }
+     }
+   #+end_src
+
+   封装角色
+   #+begin_src java
+     package strategy.session2;
+
+     /**
+      ,* @program: zen-of-design-pattern
+      ,* @author: devinkin
+      ,* @create: 2019-08-07 10:40
+      ,* @description: 封装角色
+      ,**/
+     public class Context {
+         // 抽象策略
+         private Strategy strategy = null;
+
+         // 构造函数设置具体策略
+
+         public Context(Strategy strategy) {
+             this.strategy = strategy;
+         }
+
+         // 封装后的策略方法
+         public void doAnything() {
+             this.strategy.doSomething();
+         }
+     }
+   #+end_src
+
+   场景类
+   #+begin_src java
+     package strategy.session2;
+
+     /**
+      ,* @program: zen-of-design-pattern
+      ,* @author: devinkin
+      ,* @create: 2019-08-07 10:41
+      ,* @description: 高层模块
+      ,**/
+     public class Client {
+         public static void main(String[] args) {
+             // 声明一个具体的策略
+             Strategy strategy = new ConcreteStrategy1();
+             // 声明对应的上下文
+             Context context = new Context(strategy);
+             // 执行封装后的方法
+             context.doAnything();
+         }
+     }
+   #+end_src
+
+** 策略模式的应用
+   优点：
+   - 算法可以自由切换
+   - 避免使用多重条件判断
+   - 扩展性良好
+  
+   缺点：
+   - 策略类数量增多
+   - 所有的策略类都需要对外暴露
+   
+   使用场景：
+   - 多个类只有算法或行为上稍有不同的场景。
+   - 算法需要自由切换的场景。
+   - 需要屏蔽算法规则的场景。
+   
+   注意事项：策略数量超过4哥，考虑使用混合模式，解决策略类膨胀和对外暴露的问题。
+
+** 策略模式的扩展
+   策略模式的枚举，策略枚举一般不担当经常发生变化的角色。
+   #+begin_src java
+     package strategy.session3.method4;
+
+     /**
+      ,* @program: zen-of-design-pattern
+      ,* @author: devinkin
+      ,* @create: 2019-08-07 11:22
+      ,* @description: 计算器类
+      ,**/
+     public enum  Calculator {
+         // 加法运算
+         ADD("+") {
+             @Override
+                 public int exec(int a, int b) {
+                 return a + b;
+             }
+         },
+
+         SUB("-") {
+             @Override
+                 public int exec(int a, int b) {
+                 return a - b;
+             }
+         };
+         String value = "";
+         // 定义成员值类型
+         Calculator(String value) {
+             this.value = value;
+         }
+
+         // 获得枚举成员的值
+         public String getValue() {
+             return this.value;
+         }
+
+         // 声明一个抽象函数
+         public abstract int exec(int a, int b);
+     }
+
+   #+end_src
+
+   场景类
+   #+begin_src java
+     package strategy.session3.method4;
+
+     import java.util.Arrays;
+
+     /**
+      ,* @program: zen-of-design-pattern
+      ,* @author: devinkin
+      ,* @create: 2019-08-07 11:33
+      ,* @description: 场景类
+      ,**/
+     public class Client {
+         public static void main(String[] args) {
+             // 输入的两个参数是数字
+             int a = Integer.parseInt(args[0]);
+             String symbol = args[1];
+             int b = Integer.parseInt(args[2]);
+             System.out.println("输入的参数为：" + Arrays.toString(args));
+             System.out.println("运行的结果为：" + a + symbol + b + "=" + Calculator.ADD.exec(a,b));
+         }
+     }
+   #+end_src
+
+   一般通过工厂方法模式来实现策略类的声明。
