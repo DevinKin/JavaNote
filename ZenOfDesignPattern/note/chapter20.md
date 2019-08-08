@@ -1,0 +1,148 @@
+- [第20章-迭代器模式](#sec-1)
+
+# 第20章-迭代器模式<a id="sec-1"></a>
+
+迭代器模式目前是一个已经没落的模式。
+
+迭代器模式提供一种方法访问一个容器对象中各个元素，从而不需暴露该对象的内部细节。
+
+迭代器模式的角色
+
+-   `Iterator` 抽象迭代器
+-   `ConcreteIterator` 具体迭代器
+-   `Aggregate` 抽象容器
+-   `ConcreteAggregate` 具体容器类
+
+抽象迭代器
+
+```java
+package iterator.session3;
+
+public interface Iterator {
+    Object next();
+    boolean hasNext();
+    boolean remove();
+}
+```
+
+具体迭代器
+
+```java
+package iterator.session3;
+
+import java.util.Vector;
+
+/**
+ * @program: zen-of-design-pattern
+ * @author: devinkin
+ * @create: 2019-08-08 10:40
+ * @description: 具体迭代器
+ **/
+public class ConcreteIterator implements Iterator{
+    private Vector vector = new Vector();
+
+    // 定义当前游标
+    public int cursor = 0;
+
+    @SuppressWarnings("unchecked")
+    public ConcreteIterator(Vector _vector) {
+        this.vector = _vector;
+    }
+
+
+    @Override
+    public Object next() {
+        Object result = null;
+        if (this.hasNext()) {
+            result = this.vector.get(this.cursor++);
+        } else {
+            result = null;
+        }
+        return result;
+    }
+
+    @Override
+    public boolean hasNext() {
+        if (this.cursor == this.vector.size()) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+    @Override
+    public boolean remove() {
+        this.vector.remove(this.cursor);
+        return true;
+    }
+}
+```
+
+抽象容器
+
+```java
+package iterator.session3;
+
+public interface Aggregate {
+    void add(Object object);
+    void remove(Object object);
+    Iterator iterator();
+}
+```
+
+具体容器
+
+```java
+package iterator.session3;
+
+import java.util.Vector;
+
+/**
+ * @program: zen-of-design-pattern
+ * @author: devinkin
+ * @create: 2019-08-08 10:45
+ * @description: 具体容器类
+ **/
+public class ConcreteAggregate implements Aggregate{
+    private Vector vector = new Vector();
+    @Override
+    public void add(Object object) {
+        this.vector.add(object);
+    }
+
+    @Override
+    public void remove(Object object) {
+        this.vector.remove(object);
+    }
+
+    @Override
+    public Iterator iterator() {
+        return new ConcreteIterator(this.vector);
+    }
+}
+```
+
+场景类
+
+```java
+package iterator.session3;
+
+/**
+ * @program: zen-of-design-pattern
+ * @author: devinkin
+ * @create: 2019-08-08 10:47
+ * @description: 场景类
+ **/
+public class Client {
+    public static void main(String[] args) {
+        Aggregate agg = new ConcreteAggregate();
+        agg.add("abc");
+        agg.add("aaa");
+        agg.add("1234");
+        Iterator iterator = agg.iterator();
+        while (iterator.hasNext()) {
+            System.out.println(iterator.next());
+        }
+    }
+}
+```
