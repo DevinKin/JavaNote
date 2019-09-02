@@ -1,0 +1,390 @@
+- [第6章-类文件结构](#sec-1)
+  - [Class类文件的结构](#sec-1-1)
+    - [魔数与Class文件的版本](#sec-1-1-1)
+    - [常量池](#sec-1-1-2)
+    - [访问标志](#sec-1-1-3)
+    - [类索引、父类索引与接口索引集合](#sec-1-1-4)
+    - [字段表集合](#sec-1-1-5)
+    - [方法表集合](#sec-1-1-6)
+    - [属性表集合](#sec-1-1-7)
+  - [字节码指令简介](#sec-1-2)
+    - [字节码与数据类型](#sec-1-2-1)
+    - [加载和存储指令](#sec-1-2-2)
+    - [运算指令](#sec-1-2-3)
+    - [类型转换指令](#sec-1-2-4)
+    - [对象创建与访问指令](#sec-1-2-5)
+    - [操作数栈管理指令](#sec-1-2-6)
+    - [控制转移指令](#sec-1-2-7)
+    - [方法调用和返回指令](#sec-1-2-8)
+    - [异常处理指令](#sec-1-2-9)
+    - [同步指令](#sec-1-2-10)
+
+# 第6章-类文件结构<a id="sec-1"></a>
+
+## Class类文件的结构<a id="sec-1-1"></a>
+
+`Class` 文件是一组以8位字节位基础单位的二进制流，各个数据项目严格按照顺序紧凑排列在Class文件之中，中间没有任何分隔符，这使得整个Class文件中存储的内容几乎全部是程序运行的必要数据，没有空隙存在。
+
+当遇到需要占用8位字节以上空间的数据项时，则会按照高位在前的方式分割成若干个8位字节进行存储。
+
+Class文件格式采用一种伪结构来存储数据，这种伪结构中只有两种数据类型：无符号数和表。
+
+无符号数属于基本的数据类型，以 `u1、u2、u4、u8` 代表1个字节，2个字节，4个字节和8个字节的无符号数。
+
+无符号数可以用来描述数字、索引引用、数量值或按照UTF-8编码构成字符串值。
+
+表是由多个无符号数或其他表作为数据项构成的符合数据类型，所有表都习惯性地以 `_info` 结尾。
+
+表用于描述由层次关系的复合结构的数据。
+
+Class文件格式如下
+
+| 类型                     | 名称                                    | 数量                            |
+|------------------------ |--------------------------------------- |------------------------------- |
+| u4                       | magic                                   | 1                               |
+| u2                       | minor<sub>version</sub>                 | 1                               |
+| u2                       | major<sub>version</sub>                 | 1                               |
+| u2                       | constant<sub>pool</sub><sub>count</sub> | 1                               |
+| cp<sub>info</sub>        | constant<sub>pool</sub>                 | constant<sub>pool</sub>-count-1 |
+| u2                       | access<sub>flags</sub>                  | 1                               |
+| u2                       | this<sub>class</sub>                    | 1                               |
+| u2                       | super<sub>class</sub>                   | 1                               |
+| u2                       | interfaces<sub>count</sub>              | 1                               |
+| u2                       | interfaces                              | interfaces<sub>count</sub>      |
+| u2                       | fields<sub>count</sub>                  | 1                               |
+| field<sub>info</sub>     | fields                                  | fields<sub>count</sub>          |
+| u2                       | methods<sub>count</sub>                 | 1                               |
+| method<sub>info</sub>    | methods                                 | methods<sub>count</sub>         |
+| u2                       | attributes<sub>count</sub>              | 1                               |
+| attribute<sub>info</sub> | attributes                              | attributes<sub>count</sub>      |
+
+### 魔数与Class文件的版本<a id="sec-1-1-1"></a>
+
+每个 `Class` 文件的头4个字节称为魔数(Magic Number)，它的唯一作用就是确定这个文件是否位一个能被虚拟机接受的 `Class` 文件。
+
+魔数后面四个字节分别是次版本号和主版本号。虚拟机拒绝执行超过其版本号的Class文件。
+
+### 常量池<a id="sec-1-1-2"></a>
+
+主次版本号后面是常量池入口。常量池的容量计数是从1开始的。第0项常量空出来是为了在于满足后面某些指向常量池的索引值的数据在特定情况下需要表达"不引用任何一个常量池项目"的含义。
+
+常量池中主要存放两大类常量
+
+-   字面量(Literal)
+-   符号引用(Symbolic References)
+
+字面量比较接近于Java语言层的常量概念
+
+-   文本字符串
+-   声明为final的常量值
+
+符号引用属于编译原理方面的概念
+
+-   类和接口的全限定名
+-   字段的名称和描述符
+-   方法的名称和描述符
+
+常量池的项目类型
+
+| 类型                                                 | 标志 | 描述         |
+|---------------------------------------------------- |--- |------------ |
+| CONSTANT<sub>Utf8</sub><sub>info</sub>               | 1  | UTF-8编码的字符串 |
+| CONSTANT<sub>Integer</sub><sub>info</sub>            | 3  | 整型字面量   |
+| CONSTANT<sub>Float</sub><sub>info</sub>              | 4  | 浮点型字面量 |
+| CONSTANT<sub>Long</sub><sub>info</sub>               | 5  | 长整型字面量 |
+| CONSTANT<sub>Double</sub><sub>info</sub>             | 6  | 双精度浮点型字面量 |
+| CONSTANT<sub>Class</sub><sub>info</sub>              | 7  | 类或接口的符号引用 |
+| CONSTANT<sub>String</sub><sub>info</sub>             | 8  | 字符串类型字面量 |
+| CONSTANT<sub>Fieldref</sub><sub>info</sub>           | 9  | 字段的符号引用 |
+| CONSTANT<sub>Methodref</sub><sub>info</sub>          | 10 | 类中方法的符号引用 |
+| CONSTANT<sub>InterfaceMethodref</sub><sub>info</sub> | 11 | 接口中方法的符号引用 |
+| CONSTANT<sub>NameAndType</sub><sub>info</sub>        | 12 | 字段或方法的部分符号引用 |
+| CONSTANT<sub>MethodHandle</sub><sub>info</sub>       | 15 | 表示方法句柄 |
+| CONSTANT<sub>MethodType</sub><sub>info</sub>         | 16 | 标识方法类型 |
+| CONSTANT<sub>InvokeDynamic</sub><sub>info</sub>      | 18 | 标识一个动态方法调用点 |
+
+### 访问标志<a id="sec-1-1-3"></a>
+
+常量池结束后，后面两个字节代表访问标志(access<sub>flags</sub>)，用于识别类或接口层次的访问信息。
+
+访问标志
+
+| 标志名称                 | 标志值 | 含义                                                    |
+|------------------------ |------ |------------------------------------------------------- |
+| ACC<sub>PUBLIC</sub>     | 0x0001 | 是否为public类型                                        |
+| ACC<sub>FINAL</sub>      | 0x0010 | 是否被声明为final，只有类可设置                         |
+| ACC<sub>SUPER</sub>      | 0x0020 | 是否允许使用invokespecial字节码指令的新语义，JDK1.0.2之后编译出来的类的这个标志都必须为真 |
+| ACC<sub>INTERFACE</sub>  | 0x0200 | 标识这是一个接口                                        |
+| ACC<sub>ABSTRACT</sub>   | 0x0400 | 是否为abstract类型，对于接口或抽象类来说，此标志值为真，其他类值为假 |
+| ACC<sub>ANNOTATION</sub> | 0x2000 | 标识这是一个注解                                        |
+| ACC<sub>ENUM</sub>       | 0x4000 | 标识这是一个枚举                                        |
+
+### 类索引、父类索引与接口索引集合<a id="sec-1-1-4"></a>
+
+类索引和父类索引都都是一个u2类型的数据，接口索引集合是一组u2类型的数据的集合，Class文件 中由这三项数据来确定这个类的继承关系。
+
+类索引和父类索引引用两个u2类型的索引值标识，它们各指向一个类型为 `CONSTANT_Class_info` 的类描述符常量，通过 `CONSTANT_CLASS_info` 类型的常量中的索引值可以找到定义在 `CONSTANT_Utf8_info` 类型的常量中的全限定名字符串。
+
+类索引查找全限定名的过程。 ![img](./images/Class01.png)
+
+### 字段表集合<a id="sec-1-1-5"></a>
+
+字段表(field<sub>info</sub>) 用于买哦书接口或类中声明的变量。字段包括类级变量以及实例级变量，但不包括在方法内部声明的局部变量。
+
+字段表结构
+
+| 类型 | 名称                        | 数量 | 类型                     | 名称                       | 数量                       |
+|--- |--------------------------- |--- |------------------------ |-------------------------- |-------------------------- |
+| u2 | access<sub>flags</sub>      | 1  | u2                       | attributes<sub>count</sub> | 1                          |
+| u2 | name<sub>index</sub>        | 1  | attribute<sub>info</sub> | attributes                 | attributes<sub>count</sub> |
+| u2 | description<sub>index</sub> | 1  |                          |                            |                            |
+
+字段访问标志
+
+| 标志名称                | 标志值 | 含义           |
+|----------------------- |------ |-------------- |
+| ACC<sub>PUBLIC</sub>    | 0x0001 | 字段是否public |
+| ACC<sub>PRIVATE</sub>   | 0x0002 | 字段是否private |
+| ACC<sub>PROTECTED</sub> | 0x0004 | 字段是否为protected |
+| ACC<sub>STATIC</sub>    | 0x0008 | 字段是否static |
+| ACC<sub>FINAL</sub>     | 0x0010 | 字段是否final  |
+| ACC<sub>VOLATILE</sub>  | 0x0040 | 字段是否volatitle |
+| ACC<sub>TRANSIENT</sub> | 0x0080 | 字段是否transient |
+| ACC<sub>SYNTHETIC</sub> | 0x1000 | 字段是否由编译器自动产生的 |
+| ACC<sub>ENUM</sub>      | 0x4000 | 字段是否enum   |
+
+描述符的作用是用来描述字段的数据类型、方法的参数列表(包括数量、类型以及顺序)和返回值。
+
+-   基本数据类型(byte、char、double、float、int、long、short、boolean)以及代表无返回值的void类型都用一个大写字符来表示。
+-   对象类型则用字符L假对象的全限定名来表示。
+
+描述符标识字符含义
+
+| 标识字符 | 含义                    |
+|---- |----------------------- |
+| B    | 基本类型byte            |
+| C    | 基本类型char            |
+| D    | 基本类型double          |
+| F    | 基本类型float           |
+| I    | 基本类型int             |
+| J    | 基本类型long            |
+| S    | 基本类型short           |
+| Z    | 基本类型boolean         |
+| V    | 特殊类型void            |
+| L    | 对象类型，如Ljava/lang/Object |
+
+对于数组类型，每一维度将使用一个前置的 `[` 符号来描述。 `String[][]` String二维数组，被记录为 `[[Ljava/lang/String;`
+
+描述符来描述方法时，按照先参数列表，后返回值的顺序描述，参数列表按照参数的严格顺序放在一组小括号 `()` 内。
+
+### 方法表集合<a id="sec-1-1-6"></a>
+
+方法表的结构同字段表结构一样，依次包括了访问标志、名称索引、描述符索引、属性表集合。
+
+方法表结构
+
+| 类型 | 名称                        | 数量 | 类型                     | 名称                       | 数量                       |
+|--- |--------------------------- |--- |------------------------ |-------------------------- |-------------------------- |
+| u2 | access<sub>flags</sub>      | 1  | u2                       | attributes<sub>count</sub> | 1                          |
+| u2 | name<sub>index</sub>        | 1  | attribute<sub>info</sub> | attributes                 | attributes<sub>count</sub> |
+| u2 | description<sub>index</sub> | 1  |                          |                            |                            |
+
+方法访问标志
+
+| 标志名称                   | 标志值 | 含义             |
+|-------------------------- |------ |---------------- |
+| ACC<sub>PUBLIC</sub>       | 0x0001 | 方法是否public   |
+| ACC<sub>PRIVATE</sub>      | 0x0002 | 方法是否private  |
+| ACC<sub>PROTECTED</sub>    | 0x0004 | 方法是否为protected |
+| ACC<sub>STATIC</sub>       | 0x0008 | 方法是否static   |
+| ACC<sub>FINAL</sub>        | 0x0010 | 方法是否final    |
+| ACC<sub>SYNCHRONIZED</sub> | 0x0020 | 方法是否synchronized |
+| ACC<sub>BRIDGE</sub>       | 0x0040 | 方法是否由编译器产生的桥接方法 |
+| ACC<sub>VARARGS</sub>      | 0x0080 | 方法是否是否接受不定参数 |
+| ACC<sub>NATIVE</sub>       | 0x0100 | 方法是否为native |
+| ACC<sub>ABSTRACT</sub>     | 0x0400 | 方法是否abstract |
+| ACC<sub>STRICTFP</sub>     | 0x0800 | 方是是否为strictfp |
+| ACC<sub>SYNTHETIC</sub>    | 0x1000 | 方法是否是由编译器自动产生的 |
+
+方法中的Java代码，经过编译器翻译成字节码指令后，存放在方法属性集合中一个名为"Code"的属性里面
+
+Java要重载一个方法，除了要与原方法具有相同的简单名称，还需要拥有一个与原方法不同的特征签名。
+
+特征签名是一个方法中各个参数在常量池的字段符号的引用集合。
+
+### 属性表集合<a id="sec-1-1-7"></a>
+
+在Class文件、字段表、方法表都可以携带自己的属性表集合，以用于描述某些场景专有的信息。
+
+虚拟机规范预定义的常用属性
+
+| 属性名称                             | 使用位置  | 含义                                                                                                                                                                                           |
+|------------------------------------ |--------- |---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Code                                 | 方法表    | Java代码编译成字节码指令                                                                                                                                                                       |
+| ConstantValue                        | 字段表    | final关键字定义的常量值                                                                                                                                                                        |
+| Deprecated                           | 类、方法表、字段表 | 被声明为deprecated的方法和字段                                                                                                                                                                 |
+| Exceptions                           | 方法表    | 方法抛出的异常                                                                                                                                                                                 |
+| EnclosingMethod                      | 类文件    | 仅当一个类为局部类或匿名类时才能拥有这个属性，这个属性用于标识这个类所在的外围方法                                                                                                             |
+| InnerClasses                         | 类文件    | 内部类列表                                                                                                                                                                                     |
+| LineNumberTable                      | Code属性  | Java源码的行号与字节码指令的对应关系                                                                                                                                                           |
+| LocalVariableTable                   | Code属性  | 方法的局部变量描述                                                                                                                                                                             |
+| StackMapTable                        | Code属性  | JDK1.6新增的属性，供新的类型检查验证器(Type Checker)检查和处理目标方法的局部变量和操作数栈所需要的类型是否匹配                                                                                 |
+| Signature                            | 类、方法表、字段表 | JDK1.5新增的属性，这个属性用于支持泛型情况下的方法签名，在Java语言中，任何类、接口、初始化方法或成员的泛型签名如果包含了类型变量(Type Variables)或参数化类型(Parameterized Types)，则Signature属性会为它记录泛型签名信息。由于Java的泛型采用擦除法实现，在为了避免类型信息被擦除后导致签名混乱、需要这个属性记录泛型中的相关信息 |
+| SourceFile                           | 类文件    | 记录源文件名称                                                                                                                                                                                 |
+| SourceDebugExtension                 | 类文件    | JDK1.6中新增的属性，用于存储额外的调试信息。                                                                                                                                                   |
+| Synthetic                            | 类、方法表、字段表 | 标识方法字段为编译器自动生成的                                                                                                                                                                 |
+| LocalVariableTable                   | 类        | JDK1.5新增的属性，它使用特征签名代替描述符，是为了引入泛型语法之后能描述泛型参数化类型而添加。                                                                                                 |
+| RuntimeVisibleAnnotations            | 类、方法表、字段表 | JDK1.5中新增的属性，为动态注解提供支持，指明哪些注解是运行时(实际上运行时就是进行反射调用)可见的                                                                                               |
+| RuntimeInvisibleAnnotations          | 类、方法表、字段表 | JDK1.5新增的属性，用于指明哪些注解是运行时不可见的                                                                                                                                             |
+| RuntimeVisibleParameterAnnotations   | 方法表    | JDK1.5新增的属性，作用于对象方法参数                                                                                                                                                           |
+| RuntimeInvisibleParameterAnnotations | 方法表    | JDK1.5新增的属性，作用于对象方法参数。                                                                                                                                                         |
+| AnotationDefault                     | 方法表    | JDK1.5新增的属性，用于记录注解类元素的默认值。                                                                                                                                                 |
+| BootstrapMethods                     | 类文件    | JDK1.7新增的属性，用于保存invokednamic指令引用的引导方法限定符                                                                                                                                 |
+
+对于每个属性，它的名称需要从常量池中引入一个 `CONSTANT_Utf8_info` 类型的常量来标识，而属性值的结构则是完全字定义的，只需要通过一个 `u4` 的长度属性去说明属性值锁占用的位数即可。
+
+一个符合规则的属性表应该满足如下结构
+
+| 类别 | 名称                                     | 数量                       |
+|--- |---------------------------------------- |-------------------------- |
+| u2 | attribute<sub>name</sub><sub>index</sub> | 1                          |
+| u4 | attribute<sub>length</sub>               | 1                          |
+| u1 | info                                     | attribute<sub>length</sub> |
+
+Java程序方法体中的代码经过Javac编译器处理后，最终编程字节码指令存储在 `Code` 属性内。
+
+## 字节码指令简介<a id="sec-1-2"></a>
+
+Java虚拟机的指令由一个字节长度的、代表着某种特定操作含义的数字(操作码Opcode)以及跟随其后的零个或多个代表此操作所需参数(操作数,Operands)而构成。
+
+由于Java虚拟机采用面向操作数栈而不是寄存器的架构，所以大多数指令都不包含操作数，只有一个操作码。
+
+### 字节码与数据类型<a id="sec-1-2-1"></a>
+
+在Java虚拟机的指令集中，大多数的指令都包含了其操作锁对应的数据类型信息。
+
+-   `iload` 指令用于局部变量表中加载int型数据到操作数栈中。 `fload` 是加载float类型的数据。
+
+大部分指令都没有支持整数类型 `byte` 、 `char` 和 `short` ，甚至没有任何指令支持 `boolean` 类型。
+
+-   编译器会在编译期或运行期将 `byte` 和 `short` 类型的数据带符号扩展(Sign-Extend)为相应的int类型数据
+-   将 `boolean` 和 `char` 类型数据零位扩展(Zero-Extend)为相应的int类型数据。
+
+Java虚拟机指令集所支持的数据类型
+
+| opcode  | byte    | short   | int                 | long    | float   | double  | char    | reference            |
+|------- |------- |------- |------------------- |------- |------- |------- |------- |-------------------- |
+| Tipush  | bipush  | sipush  |                     |         |         |         |         |                      |
+| Tconst  |         |         | iconst              | lconst  | fconst  | dconst  |         | aconst               |
+| Tload   |         |         | iload               | lload   | fload   | dload   |         | aload                |
+| Tastore | bastore | sastore | iastore             | lastore | fastore | dastore | castore | aastore              |
+| Tadd    |         |         | iadd                | ladd    | fadd    | dadd    |         |                      |
+| Tsub    |         |         | isub                | lsub    | fsub    | dsub    |         |                      |
+| Tmul    |         |         | imul                | lmul    | fmul    | dmul    |         |                      |
+| Tdiv    |         |         | idiv                | ldiv    | fdiv    | ddiv    |         |                      |
+| Trem    |         |         | irem                | lrem    | frem    | drem    |         |                      |
+| Tneg    |         |         | ineg                | lneg    | fneg    | dneg    |         |                      |
+| Tshl    |         |         | ishl                | lshl    |         |         |         |                      |
+| Tshr    |         |         | ishr                | lshr    |         |         |         |                      |
+| Tand    |         |         | iand                | land    |         |         |         |                      |
+| Tor     |         |         | ior                 | lor     |         |         |         |                      |
+| Txor    |         |         | ixor                | lxor    |         |         |         |                      |
+| i2T     | i2b     | i2s     |                     | i2l     | i2f     | i2d     |         |                      |
+| l2T     |         |         | l2i                 |         | l2f     | l2d     |         |                      |
+| f2T     |         |         | f2i                 | f2l     |         | f2d     |         |                      |
+| d2T     |         |         | f2i                 | f2l     |         | f2d     |         |                      |
+| Temp    |         |         |                     | lemp    |         |         |         |                      |
+| Tcmpl   |         |         |                     |         | fempl   | dempl   |         |                      |
+| Tcmpg   |         |         |                     |         | fempg   | dempg   |         |                      |
+| Tcmpg   |         |         | if<sub>icmpOP</sub> |         |         |         |         | if<sub>acompOP</sub> |
+| Treturn |         |         | ireturn             | lreturn | freturn | dreturn |         | areturn              |
+
+### 加载和存储指令<a id="sec-1-2-2"></a>
+
+加载和存储指令用于将数据在栈帧中的局部变量表和操作数栈之间来回传输，这类指令包含如下内容。
+
+-   将一个局部变量加载到操作数栈： `iload、iload_<n>、lload、lload_<n>、fload、fload_<n>、dload、dload_<n>、aload、aload_<n>`
+-   将一个数值从操作数栈存储到局部变量表： `istore、istore_<n>、lstore、lstore_<n>、fstore、fstore_<n>、dstore、dstore_<n>、astore、astore<n>`
+-   将一个常量加载到操作数栈： `bipush、sipush、ldc、ldc_w、ldc2_w、aconst_null、iconst_ml、iconst_<i>、lconst_<l>、fconst_<f>、dconst_<d>`
+-   扩充局部变量表的访问索引的指令： `wide`
+
+### 运算指令<a id="sec-1-2-3"></a>
+
+运算或算术指令用于对连个操作数栈上的值进行某种特定运算。
+
+-   加法指令： `iadd、ladd、fadd、dadd`
+-   减法指令： `isub、lsub、fsub、dsub`
+-   乘法指令： `imul、lmul、fmul、dmul`
+-   除法指令： `idiv、ldiv、fdiv、ddiv`
+-   求余指令： `irem、lrem、frem、drem`
+-   取反指令： `ineg、lneg、fneg、dneg`
+-   位移指令： `ishl、ishr、iushr、lshl、lshr、lushr`
+-   按位或指令： `ior、lor`
+-   按位与指令： `iand、land`
+-   按位异或指令： `ixor、lxor`
+-   局部变量自增指令： `inc`
+-   比较指令： `dcmpg、dcmpl、fcmpg、fcmpl、lcmp`
+
+### 类型转换指令<a id="sec-1-2-4"></a>
+
+Java虚拟机直接支持以下数值类型的宽化类型转化
+
+-   int类型到long、float、double类型
+-   long类型到float、double类型
+-   float类型到double类型
+
+窄化类型转换，必须显式地使用转换指令完成，这些转换指令包括
+
+-   `i2b、i2c、i2s、l2i、f2i、f2l、d2i、d2l、d2f`
+
+### 对象创建与访问指令<a id="sec-1-2-5"></a>
+
+指令如下
+
+-   创建类实例指令： `new`
+-   创建数组的指令： `newarray、anewarray、multianewarray`
+-   访问类字段(static字段)和实例字段(非static字段)的指令： `getfield、putfield、getstatic、putstatic`
+-   把一个数组元素加载到操作数栈的指令： `baload、caload、saload、iaload、laload、faload、daload、aaload`
+-   将一个操作数栈的值存储到数组元素中的指令： `bastore、castore、sastore、iastore、fastore、dastore、aastore`
+-   取数组长度的指令： `arraylength`
+-   检查类实例类型的指令： `instanceof、checkcast`
+
+### 操作数栈管理指令<a id="sec-1-2-6"></a>
+
+直接操作操作数栈的指令
+
+-   将操作数栈顶一个或两个元素出栈： `pop、pop2`
+-   复制栈顶一个或两个数值并将复制值或双份的复制值重新压入栈顶： `dup、dup2、dup_x1、dup2_x1、dup_x2、dup2_x2`
+-   将栈最顶端的两个数值互换： `swap`
+
+### 控制转移指令<a id="sec-1-2-7"></a>
+
+控制转移指令如下
+
+-   条件分支： `ifeq、iflt、ifle、ifne、ifgt、ifge、ifnull、ifnonnull、if_icmpeq、if_icmpne、if_icmplt、if_icmpgt、if_icmpge、if_acmpeq、if_acmpne`
+-   复合条件分支： `tableswitch、lookupswitch`
+-   无条件分支： `goto、goto_w、jsr、jsr_w、ret`
+
+### 方法调用和返回指令<a id="sec-1-2-8"></a>
+
+方法调用(分配、执行过程)的指令
+
+-   `invokevirtual` 指令用于调用对象的实例方法，根据对象的实际类型进行分派(虚方法分派)。
+-   `invokeinterface` 指令用于调用接口方法，它会在运行时搜索一个实现了这个接口的方法的对象，找出适合的方法进行调用。
+-   `invokespecial` 指令用于一些需要特殊处理的实例方法，包括实例初始化、私有方法和父类方法。
+-   `invokestatic` 指令用于调用类方法(static方法)。
+-   `invokedynamic` 指令用于在运行时动态解析出调用点限定符引用的方法，并执行该方法。
+
+方法调用指令和数据类型无关。
+
+### 异常处理指令<a id="sec-1-2-9"></a>
+
+`throw` 语句都是由 `athrow` 指令来实现。
+
+### 同步指令<a id="sec-1-2-10"></a>
+
+Java虚拟机可以支持方法级的同步和方法内部一段指令序列的同步，这两种同步结构都是使用管程 `Monitor` 来支持的。
+
+方法级的同步是隐式的，即无需通过字节码指令来控制，它实现在方法调用和返回操作之中。
+
+`monitorenter` 和 `monitorexit` 指令支持 `synchronized` 关键字的语义。
