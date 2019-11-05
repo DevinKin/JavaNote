@@ -1,0 +1,111 @@
+- [第1章-Netty异步和事件驱动](#sec-1)
+  - [Java网络编程](#sec-1-1)
+  - [Netty简介](#sec-1-2)
+    - [异步和事件驱动](#sec-1-2-1)
+  - [Netty的核心组件](#sec-1-3)
+    - [Channel](#sec-1-3-1)
+    - [回调](#sec-1-3-2)
+    - [Future](#sec-1-3-3)
+    - [事件和ChannelHandler](#sec-1-3-4)
+
+# 第1章-Netty异步和事件驱动<a id="sec-1"></a>
+
+## Java网络编程<a id="sec-1-1"></a>
+
+阻塞I/O示例
+
+```java
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.ServerSocket;
+import java.net.Socket;
+
+/**
+ * @program: NettyInAction
+ * @author: devinkin
+ * @create: 2019-09-02 16:27
+ * @description: 阻塞I/O示例
+ **/
+public class BlockIoExample {
+    public void serve(int portNumber) throws IOException {
+        ServerSocket serverSocket = new ServerSocket(portNumber);
+        Socket clientSocket = serverSocket.accept();
+        BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+        PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
+        String request, response;
+        while ((request = in.readLine()) != null) {
+            if ("Done".equals(request)) {
+                break;
+            }
+            response = processRequest(request);
+            out.println(response);
+        }
+    }
+
+    public String processRequest(String request) {
+        return "Processed";
+    }
+}
+```
+
+## Netty简介<a id="sec-1-2"></a>
+
+Netty特性
+
+| 分类 | Netty的特性                                                    |
+|---- |-------------------------------------------------------------- |
+| 设计 | 统一的API，支持多种传输类型，阻塞和非阻塞的。简单而强大的线程模型。真正的无连接数据套接字支持。链接逻辑组件以支持复用。 |
+| 易于使用 | 文档齐全                                                       |
+| 性能 | 拥有比Java的核心API更高的吞吐量以及更低的延迟。得益于池化和复用，拥有耕地的资源消耗。最少的内存复制。 |
+| 健壮性 | 不会因为慢速，快速或者超载的连接而导致OutOfMemoryError。消除在告诉网络中NIO应用程序常见的不公平读/写比率 |
+| 安全性 | 完整的SSL/TLS以及StartTLS支持。可用于受限环境下，Applet和OSGI  |
+
+### 异步和事件驱动<a id="sec-1-2-1"></a>
+
+异步和可伸缩性的联系
+
+-   非阻塞网络调用使得我们可以不必等待一个操作的完成.
+-   
+
+## Netty的核心组件<a id="sec-1-3"></a>
+
+Netty的主要构件块
+
+-   Channel
+-   回调
+-   Future
+-   事件和ChannelHandler
+
+### Channel<a id="sec-1-3-1"></a>
+
+它代表一个到实体的开放连接.
+
+### 回调<a id="sec-1-3-2"></a>
+
+一个回调其实就是一个方法, 一个指向已经被提供给另一个方法的方法的引用.
+
+### Future<a id="sec-1-3-3"></a>
+
+Future提供了另一种在操作完成时通知应用程序的方式, 这个对象可以看作是一个异步操作的结果的占位符.
+
+它将在未来的某个时刻完成, 并提供对其结果的访问.
+
+Netty提供了自己的实现 `ChannelFuture` , 用于在执行异步操作的时候使用.
+
+每个Netty的出战I/O操作都将返回一个 `ChannelFuture` , 它们不会阻塞.
+
+### 事件和ChannelHandler<a id="sec-1-3-4"></a>
+
+Netty是一个网络编程框架, 所以事件是按照它们与入站或出站数据流的相关性进行分类的. 可能由入站数据或者相关的状态更改而触发的事件包括
+
+-   连接已被激活或者连接失效
+-   数据读取
+-   用户事件
+-   错误事件
+
+出站事件是未来将会触发的某个动作的操作结果, 这些动作包括
+
+-   打开或者关闭到远程节点的连接
+-   将数据写到或者冲刷到套接字
