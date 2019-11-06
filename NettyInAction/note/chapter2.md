@@ -1,0 +1,77 @@
+- [第2章-第一款Netty应用程序](#sec-1)
+  - [编写Echo服务器](#sec-1-1)
+    - [ChannelHandler和业务逻辑](#sec-1-1-1)
+    - [引导服务器](#sec-1-1-2)
+  - [编写Echo客户端](#sec-1-2)
+    - [通过ChannelHandler实现客户端逻辑](#sec-1-2-1)
+    - [引导客户端](#sec-1-2-2)
+
+# 第2章-第一款Netty应用程序<a id="sec-1"></a>
+
+## 编写Echo服务器<a id="sec-1-1"></a>
+
+### ChannelHandler和业务逻辑<a id="sec-1-1-1"></a>
+
+所有Netty服务器都需要以下两部分
+
+-   至少一个 `ChannelHandler` , 该组件实现了服务器对从客户端接收的数据的处理, 即它的业务逻辑.
+-   引导, 这是配置服务器的启动代码. 至少, 它会将服务器绑定到它要监听连接请求的端口上.
+
+我们继承 `ChannelInboundHandlerAdapter` 类, 它提供了 `ChannelInboundHandler` 的默认实现, 提供了以下有用的方法
+
+-   `channelRead()` 对于每个传入的消息都要调用
+-   `channelReadComplete()` 通知 `ChannelInboundHandler` 最后一次对 `channelRead()` 调用是当前批量读取中的最后一条消息
+-   `exceptionCaught()` 在读取期间, 由异常抛出时会调用
+
+针对不同类型的事件来调用 `ChannelHandler`
+
+应用程序通过实现或扩展 `ChannelHandler` 来挂钩到事件的生命周期, 并且提供自定义的应用程序逻辑.
+
+在架构上, `ChannelHandler` 有助于保持业务逻辑与网络处理代码的分离.
+
+### 引导服务器<a id="sec-1-1-2"></a>
+
+引导服务器涉及内容如下
+
+-   绑定到服务器将其上监听并接受传入连接请求的端口
+-   配置Channel, 以将有关的入站信息通知给 `EchoServerHandler` 实例
+
+服务器的主要代码组件
+
+-   EchoServerHandler实现了业务逻辑
+-   main()方法引导了服务器
+
+引导过程中所需要的步骤如下
+
+-   创建一个 `ServerBootStrap` 实例以引导和绑定服务器
+-   创建并分配一个 `NioEventLoopGroup` 实例以进行事件的处理, 如接受新连接以及读/写数据.
+-   指定服务器绑定本地的 `InetSocketAddress`
+-   使用一个 `EchoServerHandler` 的实例初始化每一个新的Channel
+-   调用 `ServerBootStrap.bind()` 方法以绑定服务器
+
+## 编写Echo客户端<a id="sec-1-2"></a>
+
+Echo客户端实现的功能
+
+-   连接到服务器
+-   发送一个或多个消息
+-   对于每个消息, 等待并接收从服务器发挥的相同的消息
+-   关闭连接
+
+### 通过ChannelHandler实现客户端逻辑<a id="sec-1-2-1"></a>
+
+客户端扩展 `SimpleChannelInboundHandler` 类以处理所有必须的任务
+
+-   `channelActive()` 在到服务器的连接建立之后将被调用
+-   `channelRead0()` 当从服务器收到一条消息时被调用
+-   `exceptionCaught()` 在处理过程中引发异常时被调用
+
+### 引导客户端<a id="sec-1-2-2"></a>
+
+实现步骤
+
+-   创建一个 `BootStrap` 实例
+-   为事件处理分配了一个 `NioEventLoopGroup` 实例, 其中事件处理包括创建新的连接以及处理入站和出站数据.
+-   为服务器连接创建了一个 `InetSocketAddress` 实例
+-   当连接被创建时, 一个 `EchoClientHandler` 实例会被安装到(该Channel的) `ChannelPipeline` 中
+-   在一切都设置完成后, 调用 `BootStrap.connect()` 方法连接到远程节点
